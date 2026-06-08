@@ -1,0 +1,271 @@
+/**
+ * ComparablesMap
+ *
+ * Renders the subject property and comparable pins on a Leaflet map
+ * using Stadia Maps' Alidade Smooth Light tile style.
+ *
+ * This is a client-only component — Leaflet requires the DOM.
+ * Next.js dynamic import with ssr:false handles this automatically
+ * when you use <ComparablesMapDynamic /> (see below).
+ *
+ * Tile URL format:
+ *   https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=KEY
+ *
+ * Postcodes are geocoded on demand via postcodes.io (free, no key needed).
+ * Results are cached in module scope to avoid repeated fetches.
+ */
+
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import type { Comparable } from '@/types'
+
+// ─── Geocode cache ─────────────────────────────────────────────
+
+const geocodeCache = new Map<string, [number, number] | null>()
+
+async function geocodePostcode(postcode: string): Promise<[number, number] | null> {
+  const clean = postcode.replace(/\s+/g, '').toUpperCase()
+  if (geocodeCache.has(clean)) return geocodeCache.get(clean)!
+
+  try {
+    const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`)
+    if (!res.ok) throw new Error('Not found')
+    const data = await res.json()
+    const coords: [number, number] = [data.result.latitude, data.result.longitude]
+    geocodeCache.set(clean, coords)
+    return coords
+  } catch {
+    geocodeCache.set(clean, null)
+    return null
+  }
+}
+
+// ─── Props ─────────────────────────────────────────────────────
+
+interface ComparablesMapProps {
+  subjectPostcode: string
+  subjectAddress: string
+  comparables: {
+    forsale: Comparable[]
+    sold: Comparable[]
+    auction: Comparable[]
+  }
+  height?: number
+}
+
+// ─── Pin colours ───────────────────────────────────────────────
+// Subject:       accent brown  #8B6F47
+// For sale:      blue          #1A4A7A
+// Sold (ticked): green         #2D6A4F
+// Sold (plain):  muted         #9A9690
+// Auction:       amber         #7A5C00
+
+function makeIcon(colour: string, size: 'lg' | 'sm' = 'sm') {
+  const r = size === 'lg' ? 10 : 8
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${r*2}" height="${r*2}" viewBox="0 0 ${r*2} ${r*2}"><circle cx="${r}" cy="${r}" r="${r-1}" fill="${colour}" stroke="#fff" stroke-width="1.5"/></svg>`
+  // We return a plain object — Leaflet's DivIcon is created inside useEffect
+  return { svg, size: r * 2 }
+}
+
+const COLOURS = {
+  subject:  '#8B6F47',
+  forsale:  '#1A4A7A',
+  sold:     '#2D6A4F',
+  soldOff:  '#9A9690',
+  auction:  '#7A5C00',
+  aucOff:   '#C0BBB0',
+}
+
+// ─── Component ─────────────────────────────────────────────────
+
+export function ComparablesMap({
+  subjectPostcode,
+  subjectAddress,
+  comparables,
+  height = 180,
+}: ComparablesMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<any>(null)
+  const [status, setStatus] = useState<'loading' | 'ready' | 'no-postcode' | 'error'>('loading')
+  const apiKey = process.env.NEXT_PUBLIC_STADIA_API_KEY || ''
+
+  useEffect(() => {
+    if (!subjectPostcode) { setStatus('no-postcode'); return }
+
+    let cancelled = false
+
+    async function init() {
+      // Dynamically import Leaflet (client-only)
+      const L = (await import('leaflet')).default
+      await import('leaflet/dist/leaflet.css')
+
+      if (cancelled || !containerRef.current) return
+
+      // Destroy previous instance if re-initialising
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+
+      // Geocode subject property
+      const subjectCoords = await geocodePostcode(subjectPostcode)
+      if (cancelled) return
+      if (!subjectCoords) { setStatus('error'); return }
+
+      // Initialise map
+      const map = L.map(containerRef.current, {
+        zoomControl: false,
+        attributionControl: true,
+        scrollWheelZoom: false,
+      })
+      mapRef.current = map
+
+      // Stadia Alidade Smooth Light tiles
+      const tileUrl = apiKey
+        ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+        : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png'
+
+      L.tileLayer(tileUrl, {
+        minZoom: 10,
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map)
+
+      // ── Helper: create a coloured circle DivIcon ──
+      function circleIcon(colour: string, large = false) {
+        const s = large ? 18 : 12
+        return L.divIcon({
+          className: '',
+          html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${colour};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25)"></div>`,
+          iconSize: [s, s],
+          iconAnchor: [s / 2, s / 2],
+        })
+      }
+
+      // ── Subject property pin (larger, accent colour) ──
+      const subjectMarker = L.marker(subjectCoords, { icon: circleIcon(COLOURS.subject, true) })
+        .addTo(map)
+        .bindPopup(`<strong style="font-family:DM Sans,sans-serif;font-size:12px">${subjectAddress || subjectPostcode}</strong>`)
+
+      const allCoords: [number, number][] = [subjectCoords]
+
+      // ── Geocode and plot comparables ──
+      const allComps: { comp: Comparable; type: keyof typeof comparables }[] = [
+        ...comparables.forsale.map(c => ({ comp: c, type: 'forsale' as const })),
+        ...comparables.sold.map(c => ({ comp: c, type: 'sold' as const })),
+        ...comparables.auction.map(c => ({ comp: c, type: 'auction' as const })),
+      ]
+
+      await Promise.all(
+        allComps.map(async ({ comp, type }) => {
+          if (!comp.postcode) return
+          const coords = await geocodePostcode(comp.postcode)
+          if (!coords || cancelled) return
+
+          const colour = type === 'forsale'
+            ? COLOURS.forsale
+            : type === 'sold'
+              ? (comp.ticked ? COLOURS.sold : COLOURS.soldOff)
+              : (comp.ticked ? COLOURS.auction : COLOURS.aucOff)
+
+          L.marker(coords, { icon: circleIcon(colour) })
+            .addTo(map)
+            .bindPopup(
+              `<div style="font-family:DM Sans,sans-serif;font-size:11px;line-height:1.5">
+                <strong>${comp.address}</strong><br>
+                ${comp.postcode}<br>
+                ${comp.price ? '£' + Math.round(comp.price).toLocaleString('en-GB') : ''}
+                ${comp.psf ? ' · £' + comp.psf + '/sqft' : ''}
+              </div>`
+            )
+
+          allCoords.push(coords)
+        })
+      )
+
+      if (cancelled) return
+
+      // Fit map to all pins with padding
+      if (allCoords.length === 1) {
+        map.setView(subjectCoords, 15)
+      } else {
+        map.fitBounds(L.latLngBounds(allCoords), { padding: [24, 24] })
+      }
+
+      setStatus('ready')
+    }
+
+    init().catch(() => { if (!cancelled) setStatus('error') })
+
+    return () => {
+      cancelled = true
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
+    }
+  // Re-run when comparables or subject postcode changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectPostcode, subjectAddress, JSON.stringify(comparables)])
+
+  // ── Legend ──────────────────────────────────────────────────
+
+  const legend = [
+    { colour: COLOURS.subject,  label: 'Subject property' },
+    { colour: COLOURS.forsale,  label: 'For sale' },
+    { colour: COLOURS.sold,     label: 'Sold (ticked)' },
+    { colour: COLOURS.auction,  label: 'Auction (ticked)' },
+  ]
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {/* Map container */}
+      <div
+        style={{
+          position: 'relative',
+          height,
+          borderRadius: 10,
+          overflow: 'hidden',
+          border: '1px solid var(--border)',
+          background: 'var(--cream2)',
+        }}
+      >
+        {/* Leaflet renders into this div */}
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+        {/* Loading overlay */}
+        {status === 'loading' && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream2)', gap: 8, fontSize: 12, color: 'var(--ink3)' }}>
+            <span>Loading map…</span>
+          </div>
+        )}
+
+        {/* No postcode state */}
+        {status === 'no-postcode' && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--ink3)', fontSize: 12 }}>
+            <i className="ti ti-map-pin" style={{ fontSize: 24 }} />
+            <span>Enter a postcode to show the map</span>
+          </div>
+        )}
+
+        {/* Error state */}
+        {status === 'error' && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--ink3)', fontSize: 12 }}>
+            <i className="ti ti-map-off" style={{ fontSize: 24 }} />
+            <span>Could not geocode postcode</span>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      {status === 'ready' && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 6, paddingLeft: 2 }}>
+          {legend.map(l => (
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--ink3)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.colour, border: '1.5px solid #fff', boxShadow: '0 0 0 1px ' + l.colour }} />
+              {l.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

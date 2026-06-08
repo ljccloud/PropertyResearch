@@ -1,0 +1,27 @@
+@keyframes spin { to { transform: rotate(360deg) } }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent }
+
+:root {
+  --cream: #FAF8F4;
+  --cream2: #F2EFE8;
+  --cream3: #E8E4DA;
+  --ink: #1C1A16;
+  --ink2: #5A5650;
+  --ink3: #9A9690;
+  --border: #D8D4CA;
+  --border2: #C0BBB0;
+  --accent: #8B6F47;
+  --accent2: #A67C52;
+  --green: #2D6A4F;
+  --green-bg: #E8F4EE;
+  --red: #8B2020;
+  --red-bg: #F4E8E8;
+  --amber: #7A5C00;
+  --amber-bg: #FFF8E1;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--cream); }
+body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
