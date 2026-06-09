@@ -20,7 +20,7 @@ export async function GET() {
     access_type: 'offline',
     // drive.file = access only to files this app created (safer than full drive)
     scope: ['https://www.googleapis.com/auth/drive.file'],
-    prompt: 'consent',
+    prompt: 'select_account consent',
   })
   return NextResponse.redirect(url)
 }
