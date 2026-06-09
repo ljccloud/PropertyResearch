@@ -21,6 +21,8 @@ export async function GET() {
     // drive.file = access only to files this app created (safer than full drive)
     scope: ['https://www.googleapis.com/auth/drive.file'],
     prompt: 'select_account consent',
+    include_granted_scopes: true,
   })
-  return NextResponse.redirect(url)
+  //Apppend &authuser=-1 to force Google to show the account picker regardless of existing browser session
+  return NextResponse.redirect(url + '&authuser=-1')
 }
