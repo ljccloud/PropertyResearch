@@ -27,6 +27,18 @@ function getClient() {
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
+  const error = req.nextUrl.searchParams.get('error')
+
+  // Google returned an error (e.g. user denied, wrong account)
+  if (error) {
+    const messages: Record<string, string> = {
+      access_denied: 'This Google account is not authorised. Make sure you are signing in with an account added as a Test User in Google Cloud Console.',
+      redirect_uri_mismatch: 'Redirect URI mismatch. Check GOOGLE_REDIRECT_URI in Vercel matches the URI in Google Cloud Console exactly.',
+    }
+    const msg = messages[error] || `Google auth error: ${error}`
+    return NextResponse.redirect(new URL(`/?auth_error=${encodeURIComponent(msg)}`, req.url))
+  }
+
   if (!code) {
     return NextResponse.redirect(new URL('/?auth_error=Missing+authorisation+code', req.url))
   }
