@@ -1,6 +1,6 @@
 'use client'
 import { useStore } from '@/lib/store'
-import { £ } from '@/lib/format'
+import { gbp } from '@/lib/format'
 
 interface Props { onOpenProperty: (id: string) => void }
 
@@ -40,7 +40,7 @@ export function HistoryScreen({ onOpenProperty }: Props) {
                 <span style={{ display: 'inline-flex', borderRadius: 99, padding: '2px 9px', fontSize: 11, fontWeight: 500, ...(outcomeStyle[p.outcome] || {}) }}>{p.outcome}</span>
               </div>
               {p.archiveReason && <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 4 }}>{p.archiveReason}</div>}
-              <div style={{ fontSize: 12, color: 'var(--ink2)' }}>{£(p.listPrice)}{p.sqft ? ` · ${p.sqft} sqft` : ''}</div>
+              <div style={{ fontSize: 12, color: 'var(--ink2)' }}>{gbp(p.listPrice)}{p.sqft ? ` · ${p.sqft} sqft` : ''}</div>
             </div>
           ))}
         </div>

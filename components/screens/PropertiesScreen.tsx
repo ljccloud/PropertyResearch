@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useStore } from '@/lib/store'
 import { newProperty } from '@/types'
 import type { Property } from '@/types'
-import { £, psf } from '@/lib/format'
+import { gbp, psf } from '@/lib/format'
 import { Sheet } from '@/components/ui/Sheet'
 import { Btn } from '@/components/ui/Btn'
 import { FormRow, Input } from '@/components/ui/FormRow'
@@ -132,7 +132,7 @@ function PropertyCard({ property: p, onOpen, compareIds, onToggleCompare }: { pr
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: tags.length ? 8 : 0 }}>
         {[
-          { label: 'List price', val: £(p.listPrice) },
+          { label: 'List price', val: gbp(p.listPrice) },
           { label: 'Sq ft', val: p.sqft || '—', sub: psfVal ? `£${psfVal}/sqft` : '' },
           { label: 'Beds/Baths', val: `${p.beds || '—'}/${p.baths || '—'}` },
         ].map(m => (

@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import { £ } from '@/lib/format'
+import { gbp } from '@/lib/format'
 import { Sheet } from '@/components/ui/Sheet'
 import { Btn } from '@/components/ui/Btn'
 import { FormRow, Input, Textarea } from '@/components/ui/FormRow'
@@ -52,7 +52,7 @@ export function PastSalesScreen() {
           <div style={{ fontSize: 11, color: 'var(--ink3)' }}>{s.postcode}{s.dateSold ? ` · ${s.dateSold}` : ''}</div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{£(s.soldPrice)}</div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>{gbp(s.soldPrice)}</div>
           <div style={{ fontSize: 11, color: 'var(--ink3)' }}>{psfVal ? `£${psfVal}/sqft` : ''}</div>
         </div>
       </div>
@@ -126,8 +126,8 @@ export function PastSalesScreen() {
           const psfVal = s.sqft ? Math.round(s.soldPrice / s.sqft) : 0
           const rows = [
             ['Address', s.address], ['Postcode', s.postcode],
-            ['Guide price', £(s.guide)], ['Date listed', s.dateListed || '—'],
-            ['Date sold', s.dateSold || '—'], ['Sold price', £(s.soldPrice)],
+            ['Guide price', gbp(s.guide)], ['Date listed', s.dateListed || '—'],
+            ['Date sold', s.dateSold || '—'], ['Sold price', gbp(s.soldPrice)],
             ['Sq ft', s.sqft || '—'], ['Sq m', s.sqm || '—'],
             ['£/sqft', psfVal ? `£${psfVal}` : '—'], ['Bedrooms', s.beds || '—'],
             ['Outdoor', s.outdoor || '—'], ['Auction', s.auction ? '☑ Yes' : '☐ No'],

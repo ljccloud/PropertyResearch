@@ -1,7 +1,7 @@
 'use client'
 import { useState, useCallback } from 'react'
 import { useStore } from '@/lib/store'
-import { £, pct } from '@/lib/format'
+import { gbp, pct } from '@/lib/format'
 import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenovation, calcYield } from '@/lib/calculations'
 import { Sheet } from '@/components/ui/Sheet'
 import { Btn } from '@/components/ui/Btn'
@@ -124,7 +124,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                 <td style={td}><div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div></td>
                 <td style={td}><div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.address}</div><div style={{fontSize:10,color:'var(--ink3)'}}>{c.postcode}</div></td>
                 <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date}</td>
-                <td style={{...td,fontSize:11}}>{£(c.price)}</td>
+                <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
                 <td style={{...td,fontSize:11}}>{c.psf?'£'+c.psf:'—'}</td>
               </tr>
             ))}
@@ -222,8 +222,8 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                     return (
                       <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom: i<arr.length-1?'1px solid var(--cream2)':'none',fontSize:12}}>
                         <span style={{color:'var(--ink2)',minWidth:82}}>{h.date}</span>
-                        <span style={{fontWeight:500,flex:1}}>{£(h.price)}</span>
-                        {mv !== null && mv !== 0 && <span style={{fontSize:11,padding:'2px 6px',borderRadius:99,background:mv>0?'var(--red-bg)':'var(--green-bg)',color:mv>0?'var(--red)':'var(--green)'}}>{mv>0?'+':''}{£(mv)}</span>}
+                        <span style={{fontWeight:500,flex:1}}>{gbp(h.price)}</span>
+                        {mv !== null && mv !== 0 && <span style={{fontSize:11,padding:'2px 6px',borderRadius:99,background:mv>0?'var(--red-bg)':'var(--green-bg)',color:mv>0?'var(--red)':'var(--green)'}}>{mv>0?'+':''}{gbp(mv)}</span>}
                       </div>
                     )
                   }),
@@ -266,17 +266,17 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                 <CInput type="number" value={p.resaleEst||''} onChange={e=>up({resaleEst:+e.target.value})} placeholder="0" />
               </div>
               <CalcTable rows={[
-                {label:'Offer price',value:£(p.offerPrice)},
-                {label:'Purchase fees',value:£(totalFees)},
-                {label:'Renovation cost',value:£(renoTotal)},
-                {label:'Sub-total',value:£(sub),type:'subtotal'},
-                {label:'Lease extension',value:£(lease.total)},
-                {label:'Total cost',value:£(totalCost),type:'subtotal'},
-                {label:'Financing costs',value:£(fin.total)},
-                {label:'Cost after finance',value:£(caf),type:'subtotal'},
-                {label:'Potential resale',value:£(p.resaleEst)},
-                {label:'Profit before finance',value:£(pbf)},
-                {label:<span>Profit after finance</span>,value:<span style={{color:paf>=0?'var(--green)':'var(--red)'}}>{£(paf)}</span>,type:'total'},
+                {label:'Offer price',value:gbp(p.offerPrice)},
+                {label:'Purchase fees',value:gbp(totalFees)},
+                {label:'Renovation cost',value:gbp(renoTotal)},
+                {label:'Sub-total',value:gbp(sub),type:'subtotal'},
+                {label:'Lease extension',value:gbp(lease.total)},
+                {label:'Total cost',value:gbp(totalCost),type:'subtotal'},
+                {label:'Financing costs',value:gbp(fin.total)},
+                {label:'Cost after finance',value:gbp(caf),type:'subtotal'},
+                {label:'Potential resale',value:gbp(p.resaleEst)},
+                {label:'Profit before finance',value:gbp(pbf)},
+                {label:<span>Profit after finance</span>,value:<span style={{color:paf>=0?'var(--green)':'var(--red)'}}>{gbp(paf)}</span>,type:'total'},
               ]} />
             </>)}
 
@@ -285,19 +285,19 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               <div style={{fontSize:11,color:'var(--ink3)',marginBottom:6}}>Profit after finance at offer price ±%</div>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
                 <thead><tr>{['−10%','−5%','Base','+5%','+10%'].map(h=><th key={h} style={{background:'var(--cream2)',padding:'5px 6px',textAlign:'center',fontSize:11,color:'var(--ink2)',fontWeight:500}}>{h}</th>)}</tr></thead>
-                <tbody><tr>{sensCells.map((c,i)=><td key={i} style={{padding:'5px 6px',textAlign:'center',borderBottom:'1px solid var(--cream2)',color:c.profit>=0?'var(--green)':'var(--red)'}}>{£(c.profit)}</td>)}</tr></tbody>
+                <tbody><tr>{sensCells.map((c,i)=><td key={i} style={{padding:'5px 6px',textAlign:'center',borderBottom:'1px solid var(--cream2)',color:c.profit>=0?'var(--green)':'var(--red)'}}>{gbp(c.profit)}</td>)}</tr></tbody>
               </table>
             </>)}
 
             <Collapsible title="Purchase fees">
               <CalcTable rows={[
-                {label:'Stamp duty (SDLT)',value:£(sdlt.total)},
-                {label:<span style={{fontSize:11,color:'var(--ink3)'}}>{sdlt.breakdown.map(b=>`${b.band} @ ${b.rate}% = ${£(b.tax)}`).join(' | ')}</span>,value:''},
-                {label:`Auction fee (${assumptions.defAF}%)`,value:£(af)},
-                {label:<span>Special conditions (<input value={scPct} type="number" onChange={e=>up({purchaseFees:{...p.purchaseFees,specialConditionsPct:+e.target.value}})} style={{width:36,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:3,padding:'2px 4px',fontSize:11,textAlign:'right',fontFamily:"'DM Sans',sans-serif",outline:'none'}} />%)</span>,value:£(sc)},
-                {label:'Legal fees',value:£(assumptions.defLegal)},
+                {label:'Stamp duty (SDLT)',value:gbp(sdlt.total)},
+                {label:<span style={{fontSize:11,color:'var(--ink3)'}}>{sdlt.breakdown.map(b=>`${b.band} @ ${b.rate}% = ${gbp(b.tax)}`).join(' | ')}</span>,value:''},
+                {label:`Auction fee (${assumptions.defAF}%)`,value:gbp(af)},
+                {label:<span>Special conditions (<input value={scPct} type="number" onChange={e=>up({purchaseFees:{...p.purchaseFees,specialConditionsPct:+e.target.value}})} style={{width:36,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:3,padding:'2px 4px',fontSize:11,textAlign:'right',fontFamily:"'DM Sans',sans-serif",outline:'none'}} />%)</span>,value:gbp(sc)},
+                {label:'Legal fees',value:gbp(assumptions.defLegal)},
                 ...extraPFRows.map(r=>({label:<input value={r.label} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}}/>,value:<CInput type="number" value={r.value} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,value:e.target.value}:x))} style={{width:80}} />})),
-                {label:'Total fees',value:£(totalFees),type:'total'},
+                {label:'Total fees',value:gbp(totalFees),type:'total'},
               ]} />
               <button onClick={()=>setExtraPFRows(r=>[...r,{id:uid(),label:'',value:''}])} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
                 <i className="ti ti-plus" style={{fontSize:11}} /> Add item
@@ -314,8 +314,8 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                   label:<input value={r.label} onChange={e=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}}/>,
                   value:<CInput type="number" value={r.value} onChange={e=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,value:e.target.value}:x))} />
                 })),
-                {label:'Total estimate',value:£(renoBase),type:'subtotal'},
-                {label:<label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,cursor:'pointer'}}><input type="checkbox" checked={renoVat} onChange={e=>setRenoVat(e.target.checked)} /> Incl. VAT ({assumptions.vatRate}%)</label>,value:renoVat?£(renoTotal):'—'},
+                {label:'Total estimate',value:gbp(renoBase),type:'subtotal'},
+                {label:<label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,cursor:'pointer'}}><input type="checkbox" checked={renoVat} onChange={e=>setRenoVat(e.target.checked)} /> Incl. VAT ({assumptions.vatRate}%)</label>,value:renoVat?gbp(renoTotal):'—'},
               ]} />
               <button onClick={()=>setExtraRenoRows(r=>[...r,{id:uid(),label:'',value:''}])} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
                 <i className="ti ti-plus" style={{fontSize:11}} /> Add item
@@ -325,9 +325,9 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
             <Collapsible title="Lease extension">
               <CalcTable rows={[
                 {label:'Cost of extending',value:<CInput type="number" value={p.leaseExtension?.cost||0} onChange={e=>up({leaseExtension:{...p.leaseExtension,cost:+e.target.value}})} />},
-                {label:'SDLT on extension (5%)',value:£(lease.sdlt)},
+                {label:'SDLT on extension (5%)',value:gbp(lease.sdlt)},
                 {label:'Legal fees',value:<CInput type="number" value={p.leaseExtension?.legal||1500} onChange={e=>up({leaseExtension:{...p.leaseExtension,legal:+e.target.value}})} />},
-                {label:'Total',value:£(lease.total),type:'total'},
+                {label:'Total',value:gbp(lease.total),type:'total'},
               ]} />
             </Collapsible>
 
@@ -335,10 +335,10 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               <CalcTable rows={[
                 {label:'Loan amount',value:<CInput type="number" value={p.financing?.loan||''} onChange={e=>up({financing:{...p.financing,loan:+e.target.value}})} />},
                 {label:'Interest rate (%)',value:<CInput type="number" value={p.financing?.rate||assumptions.defRate} onChange={e=>up({financing:{...p.financing,rate:+e.target.value}})} />},
-                {label:'Annual interest',value:£(fin.annual)},
-                {label:'Monthly interest',value:£(fin.monthly)},
+                {label:'Annual interest',value:gbp(fin.annual)},
+                {label:'Monthly interest',value:gbp(fin.monthly)},
                 {label:'Months to complete',value:<CInput type="number" value={p.financing?.months||6} onChange={e=>up({financing:{...p.financing,months:+e.target.value}})} />},
-                {label:'Financing cost',value:£(fin.total),type:'total'},
+                {label:'Financing cost',value:gbp(fin.total),type:'total'},
               ]} />
             </Collapsible>
 
@@ -410,10 +410,10 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                 ? <div style={{fontSize:12,color:'var(--ink3)'}}>Enter prices to see implied outcome</div>
                 : <>
                     {[
-                      p.finalSoldPrice ? ['Purchase price', £(p.finalSoldPrice), null] : null,
-                      p.targetResale   ? ['Target resale',  £(p.targetResale),  null] : null,
-                      p.actualResale   ? ['Actual resale',  £(p.actualResale),  null] : null,
-                      (p.finalSoldPrice && p.actualResale) ? ['Gross gain', £(p.actualResale - p.finalSoldPrice), p.actualResale >= p.finalSoldPrice ? 'var(--green)' : 'var(--red)'] : null,
+                      p.finalSoldPrice ? ['Purchase price', gbp(p.finalSoldPrice), null] : null,
+                      p.targetResale   ? ['Target resale',  gbp(p.targetResale),  null] : null,
+                      p.actualResale   ? ['Actual resale',  gbp(p.actualResale),  null] : null,
+                      (p.finalSoldPrice && p.actualResale) ? ['Gross gain', gbp(p.actualResale - p.finalSoldPrice), p.actualResale >= p.finalSoldPrice ? 'var(--green)' : 'var(--red)'] : null,
                     ].filter(Boolean).map(([label, value, colour]: any) => (
                       <div key={label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--cream2)',fontSize:13}}>
                         <span style={{color:'var(--ink2)'}}>{label}</span>

@@ -1,4 +1,4 @@
-export function £(n: number | null | undefined): string {
+export function gbp(n: number | null | undefined): string {
   if (n === null || n === undefined || isNaN(n)) return '—'
   return '£' + Math.round(n).toLocaleString('en-GB')
 }

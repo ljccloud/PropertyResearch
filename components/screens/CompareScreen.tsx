@@ -1,6 +1,6 @@
 'use client'
 import { useStore } from '@/lib/store'
-import { £ } from '@/lib/format'
+import { gbp } from '@/lib/format'
 
 export function CompareScreen() {
   const { properties, compareIds, toggleCompare } = useStore()
@@ -13,8 +13,8 @@ export function CompareScreen() {
   const rows = [
     { label: 'Address',    fn: (p: any) => p.address || '—' },
     { label: 'Postcode',   fn: (p: any) => p.postcode || '—' },
-    { label: 'List price', fn: (p: any) => £(p.listPrice) },
-    { label: 'Offer price',fn: (p: any) => £(p.offerPrice) },
+    { label: 'List price', fn: (p: any) => gbp(p.listPrice) },
+    { label: 'Offer price',fn: (p: any) => gbp(p.offerPrice) },
     { label: 'Sq ft',      fn: (p: any) => p.sqft || '—' },
     { label: 'Sq m',       fn: (p: any) => p.sqm || '—' },
     { label: '£/sqft',     fn: (p: any) => p.sqft && p.listPrice ? '£' + Math.round(p.listPrice / p.sqft) : '—' },
