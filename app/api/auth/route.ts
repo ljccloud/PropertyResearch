@@ -1,6 +1,10 @@
 /**
  * GET /api/auth
  * Redirects the user to Google's OAuth consent screen.
+ *
+ * - prompt: 'select_account consent' forces the account picker every time
+ * - authuser=-1 appended to the URL tells Google not to pre-select any
+ *   signed-in browser session, ensuring the picker always appears
  */
 
 import { google } from 'googleapis'
@@ -16,11 +20,18 @@ function getClient() {
 
 export async function GET() {
   const client = getClient()
+
   const url = client.generateAuthUrl({
     access_type: 'offline',
-    // drive.file = access only to files this app created (safer than full drive)
+    // drive.file = only files this app creates, nothing else in Drive
     scope: ['https://www.googleapis.com/auth/drive.file'],
-    prompt: 'consent',
+    // select_account forces the account picker
+    // consent re-prompts for permissions (required for refresh token)
+    prompt: 'select_account consent',
+    include_granted_scopes: true,
   })
-  return NextResponse.redirect(url)
+
+  // authuser=-1 tells Google to ignore any existing browser session
+  // and always show the full account picker
+  return NextResponse.redirect(url + '&authuser=-1')
 }

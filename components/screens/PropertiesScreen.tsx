@@ -1,0 +1,156 @@
+'use client'
+import { useState } from 'react'
+import { useStore } from '@/lib/store'
+import { newProperty } from '@/types'
+import type { Property } from '@/types'
+import { £, psf } from '@/lib/format'
+import { Sheet } from '@/components/ui/Sheet'
+import { Btn } from '@/components/ui/Btn'
+import { FormRow, Input } from '@/components/ui/FormRow'
+
+interface Props { onOpenProperty: (id: string) => void }
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'sort-price', label: '↑ Price' },
+  { id: 'sort-psf', label: '£/sqft' },
+  { id: 'sort-beds', label: 'Beds' },
+  { id: 'tag-leasehold', label: 'Leasehold' },
+  { id: 'tag-freehold', label: 'Freehold' },
+  { id: 'tag-auction', label: 'Auction' },
+  { id: 'tag-needs work', label: 'Needs work' },
+]
+
+export function PropertiesScreen({ onOpenProperty }: Props) {
+  const { properties, compareIds, toggleCompare, addProperty } = useStore()
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [form, setForm] = useState({ address: '', postcode: '', listPrice: '', sqft: '', beds: '', url: '', tags: '' })
+
+  const filtered = properties
+    .filter(p => {
+      if (p.archived) return false
+      if (search) {
+        const q = search.toLowerCase()
+        if (!(p.address + ' ' + p.postcode + ' ' + (p.tags || '')).toLowerCase().includes(q)) return false
+      }
+      if (filter.startsWith('tag-')) {
+        const t = filter.replace('tag-', '')
+        return (p.tags || '').toLowerCase().includes(t)
+      }
+      return true
+    })
+    .sort((a, b) => {
+      if (filter === 'sort-price') return a.listPrice - b.listPrice
+      if (filter === 'sort-psf') return (a.sqft ? a.listPrice / a.sqft : 0) - (b.sqft ? b.listPrice / b.sqft : 0)
+      if (filter === 'sort-beds') return b.beds - a.beds
+      return 0
+    })
+
+  function handleAdd() {
+    if (!form.address.trim()) return
+    const p = newProperty()
+    p.address = form.address.trim()
+    p.postcode = form.postcode.trim()
+    p.listPrice = parseFloat(form.listPrice) || 0
+    p.sqft = parseFloat(form.sqft) || 0
+    p.beds = parseFloat(form.beds) || 0
+    p.url = form.url.trim()
+    p.tags = form.tags.trim()
+    addProperty(p)
+    setSheetOpen(false)
+    setForm({ address: '', postcode: '', listPrice: '', sqft: '', beds: '', url: '', tags: '' })
+    onOpenProperty(p.id)
+  }
+
+  return (
+    <div>
+      {/* Search */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 11px', marginBottom: 10 }}>
+        <i className="ti ti-search" style={{ color: 'var(--ink3)', fontSize: 16 }} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search properties…" style={{ border: 'none', background: 'none', fontFamily: "'DM Sans',sans-serif", fontSize: 14, flex: 1, outline: 'none', color: 'var(--ink)' }} />
+      </div>
+
+      {/* Filter pills */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 11, overflowX: 'auto', paddingBottom: 2 }}>
+        {FILTERS.map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)} style={{ background: filter === f.id ? 'var(--accent)' : '#fff', border: `1px solid ${filter === f.id ? 'var(--accent)' : 'var(--border)'}`, color: filter === f.id ? '#fff' : 'var(--ink2)', borderRadius: 99, padding: '5px 10px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Property cards */}
+      {filtered.length === 0 ? (
+        <p style={{ textAlign: 'center', color: 'var(--ink3)', padding: 28, fontSize: 13 }}>No properties. Tap + to add one.</p>
+      ) : (
+        filtered.map(p => <PropertyCard key={p.id} property={p} onOpen={onOpenProperty} compareIds={compareIds} onToggleCompare={toggleCompare} />)
+      )}
+
+      {/* FAB */}
+      <button onClick={() => setSheetOpen(true)} style={{ position: 'fixed', bottom: 'calc(84px + env(safe-area-inset-bottom,0px))', right: 16, width: 50, height: 50, background: 'var(--accent)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#fff', zIndex: 99, boxShadow: '0 2px 10px rgba(139,111,71,.3)' }}>
+        <i className="ti ti-plus" />
+      </button>
+
+      {/* Quick add sheet */}
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Quick add property"
+        footer={<><Btn onClick={() => setSheetOpen(false)}>Cancel</Btn><Btn variant="primary" full onClick={handleAdd}>Add property</Btn></>}>
+        <FormRow label="Address"><Input value={form.address} onChange={e => setForm(s => ({ ...s, address: e.target.value }))} placeholder="e.g. 14 Victoria Street" /></FormRow>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
+          <FormRow label="Postcode"><Input value={form.postcode} onChange={e => setForm(s => ({ ...s, postcode: e.target.value }))} /></FormRow>
+          <FormRow label="Listing price"><Input type="number" value={form.listPrice} onChange={e => setForm(s => ({ ...s, listPrice: e.target.value }))} placeholder="450000" /></FormRow>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
+          <FormRow label="Sq ft"><Input type="number" value={form.sqft} onChange={e => setForm(s => ({ ...s, sqft: e.target.value }))} /></FormRow>
+          <FormRow label="Beds"><Input type="number" value={form.beds} onChange={e => setForm(s => ({ ...s, beds: e.target.value }))} /></FormRow>
+        </div>
+        <FormRow label="Listing URL"><Input value={form.url} onChange={e => setForm(s => ({ ...s, url: e.target.value }))} placeholder="https://rightmove.co.uk/…" /></FormRow>
+        <FormRow label="Tags"><Input value={form.tags} onChange={e => setForm(s => ({ ...s, tags: e.target.value }))} placeholder="Leasehold, Needs work…" /></FormRow>
+      </Sheet>
+    </div>
+  )
+}
+
+function PropertyCard({ property: p, onOpen, compareIds, onToggleCompare }: { property: Property; onOpen: (id: string) => void; compareIds: string[]; onToggleCompare: (id: string) => void }) {
+  const ticked = compareIds.includes(p.id)
+  const psfVal = p.sqft ? Math.round(p.listPrice / p.sqft) : 0
+  const tags = (p.tags || '').split(',').filter(Boolean)
+
+  return (
+    <div onClick={() => onOpen(p.id)} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10, cursor: 'pointer', position: 'relative' }}>
+      {/* Compare tick */}
+      <div onClick={e => { e.stopPropagation(); onToggleCompare(p.id) }} style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, border: `1.5px solid ${ticked ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: ticked ? 'var(--accent)' : '#fff', cursor: 'pointer', fontSize: 12, color: '#fff' }}>
+        {ticked ? '✓' : ''}
+      </div>
+
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, paddingRight: 30 }}>{p.address}</div>
+      <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 8 }}>
+        {p.postcode}
+        {p.url && <> · <a href={p.url} onClick={e => e.stopPropagation()} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 11 }}>View listing ↗</a></>}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: tags.length ? 8 : 0 }}>
+        {[
+          { label: 'List price', val: £(p.listPrice) },
+          { label: 'Sq ft', val: p.sqft || '—', sub: psfVal ? `£${psfVal}/sqft` : '' },
+          { label: 'Beds/Baths', val: `${p.beds || '—'}/${p.baths || '—'}` },
+        ].map(m => (
+          <div key={m.label} style={{ background: 'var(--cream)', borderRadius: 6, padding: '6px 8px' }}>
+            <div style={{ fontSize: 10, color: 'var(--ink3)', marginBottom: 2 }}>{m.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{m.val}</div>
+            {m.sub && <div style={{ fontSize: 10, color: 'var(--ink3)' }}>{m.sub}</div>}
+          </div>
+        ))}
+      </div>
+
+      {tags.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          {tags.map(t => (
+            <span key={t} style={{ display: 'inline-flex', background: 'var(--cream2)', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 8px', fontSize: 11, color: 'var(--ink2)', margin: 2 }}>{t.trim()}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
