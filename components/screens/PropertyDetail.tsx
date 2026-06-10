@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useStore } from '@/lib/store'
 import { gbp, pct } from '@/lib/format'
 import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenovation, calcYield } from '@/lib/calculations'
@@ -14,9 +14,30 @@ import { uid } from '@/types'
 
 interface Props { propertyId: string; onClose: () => void }
 
+// Compact inline input for calc tables — no background, just a plain number field
+function TInput({ value, onChange, placeholder }: { value: string|number; onChange: (v: number) => void; placeholder?: string }) {
+  return (
+    <input
+      type="number"
+      value={value === 0 ? '' : value}
+      placeholder={placeholder || '0'}
+      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      style={{ width: 90, textAlign: 'right', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 4, padding: '3px 6px', fontSize: 12, fontFamily: "'DM Sans',sans-serif", outline: 'none', color: 'var(--ink)' }}
+    />
+  )
+}
+
+// Read-only value cell for calc tables
+function Val({ children, colour }: { children: React.ReactNode; colour?: string }) {
+  return <span style={{ fontSize: 13, fontWeight: 500, color: colour || 'var(--ink)' }}>{children}</span>
+}
+
+const SQM_PER_SQFT = 0.092903
+
 export function PropertyDetail({ propertyId, onClose }: Props) {
-  const { properties, pastSales, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
+  const { properties, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
   const p = properties.find(x => x.id === propertyId)
+
   const [tab, setTab] = useState<'overview'|'comparables'|'resale'>('overview')
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [archiveOutcome, setArchiveOutcome] = useState<'Purchased'|'Passed'|'Outbid'>('Purchased')
@@ -33,11 +54,22 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
   const [extraRenoRows, setExtraRenoRows] = useState<{id:string;label:string;value:string}[]>([])
   const [extraPFRows, setExtraPFRows] = useState<{id:string;label:string;value:string}[]>([])
   const [renoVat, setRenoVat] = useState(false)
+  // Track whether loan has been manually overridden
+  const [loanOverride, setLoanOverride] = useState(false)
 
   if (!p) return null
-  // TypeScript can't narrow p inside nested functions, so we assert here
   const prop = p as Property
   const up = (patch: Partial<Property>) => updateProperty(propertyId, patch)
+
+  // ── Sq ft / sq m auto-conversion ──────────────────────────────
+  function onSqftChange(val: number) {
+    const sqm = val ? Math.round(val * SQM_PER_SQFT * 100) / 100 : 0
+    up({ sqft: val, sqm })
+  }
+  function onSqmChange(val: number) {
+    const sqft = val ? Math.round(val / SQM_PER_SQFT) : 0
+    up({ sqm: val, sqft })
+  }
 
   // ── Calculations ──────────────────────────────────────────────
   const sdlt = calcSDLT(prop.offerPrice, assumptions.sdltType)
@@ -45,21 +77,27 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
   const scPct = prop.purchaseFees?.specialConditionsPct || 0
   const sc = Math.round(prop.offerPrice * (scPct / 100))
   const extraPFTotal = extraPFRows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0)
-  const totalFees = sdlt.total + af + sc + assumptions.defLegal + extraPFTotal
+  // Purchase fees excludes SDLT (shown separately)
+  const otherFees = af + sc + assumptions.defLegal + extraPFTotal
+  const totalFees = sdlt.total + otherFees
 
-  const renoBase = Object.entries(prop.renovation || {}).reduce((s, [k, v]) => k !== 'extra' ? s + (Number(v) || 0) : s, 0)
+  const renoBase = Object.entries(prop.renovation || {})
+    .reduce((s, [k, v]) => k !== 'extra' ? s + (Number(v) || 0) : s, 0)
     + extraRenoRows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0)
   const { withVat: renoTotal } = calcRenovation({ total: renoBase }, assumptions.vatRate, renoVat)
 
-  const lease = calcLeaseExtension(prop.leaseExtension?.cost || 0, prop.leaseExtension?.legal || 1500)
-  const fin = calcFinancing(prop.financing?.loan || 0, prop.financing?.rate || assumptions.defRate, prop.financing?.months || 6)
-
+  const lease = calcLeaseExtension(prop.leaseExtension?.cost || 0, prop.leaseExtension?.legal || 0)
   const sub = prop.offerPrice + totalFees + renoTotal
   const totalCost = sub + lease.total
+
+  // Loan amount: auto = totalCost, unless manually overridden
+  const autoLoan = totalCost
+  const loanAmount = loanOverride ? (prop.financing?.loan || 0) : autoLoan
+  const fin = calcFinancing(loanAmount, prop.financing?.rate || assumptions.defRate, prop.financing?.months || 6)
+
   const caf = totalCost + fin.total
   const pbf = prop.resaleEst - totalCost
   const paf = prop.resaleEst - caf
-
   const yld = calcYield(prop.rent, prop.runningCosts, totalCost)
 
   // Sensitivity
@@ -71,14 +109,13 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
     return { profit: Math.round(profit) }
   })
 
-  // Filter comparables by date
+  // ── Comparables ───────────────────────────────────────────────
   function fByDate(comps: Comparable[]) {
     if (compDateFilter === 'all') return comps
     const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - parseInt(compDateFilter))
     return comps.filter(c => c.date && new Date(c.date) >= cutoff)
   }
 
-  // Market summary
   function ms(type: 'forsale'|'sold'|'auction') {
     const ticked = fByDate(prop.comparables?.[type] || []).filter(c => c.ticked && c.psf)
     if (!ticked.length) return { h: '—', m: '—', l: '—' }
@@ -96,7 +133,6 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
     if (c.sqft) c.psf = Math.round(c.price / c.sqft)
     const comps = { ...prop.comparables, [compType]: [...(prop.comparables?.[compType]||[]), c] }
     up({ comparables: comps })
-    // Also add to past sales
     const sale: PastSale = { id: c.id, address: c.address, postcode: c.postcode, guide: 0, dateListed: '', dateSold: c.date, soldPrice: c.price, sqft: c.sqft, sqm: 0, beds: 0, outdoor: '', notes: '', auction: compType === 'auction' }
     addPastSale(sale)
     setAddCompOpen(false)
@@ -104,10 +140,27 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
   }
 
   function tickComp(type: 'forsale'|'sold'|'auction', idx: number) {
-    const list = fByDate(prop.comparables?.[type] || [])
-    list[idx].ticked = !list[idx].ticked
-    up({ comparables: { ...prop.comparables, [type]: prop.comparables?.[type] || [] } })
+    const all = prop.comparables?.[type] || []
+    const filtered = fByDate(all)
+    filtered[idx].ticked = !filtered[idx].ticked
+    up({ comparables: { ...prop.comparables, [type]: all } })
   }
+
+  // ── Style helpers ─────────────────────────────────────────────
+  const th: React.CSSProperties = { padding: '5px', borderBottom: '1px solid var(--border)', color: 'var(--ink3)', fontWeight: 500, fontSize: 11, textAlign: 'left' }
+  const td: React.CSSProperties = { padding: '6px 5px', borderBottom: '1px solid var(--cream2)', verticalAlign: 'middle' }
+
+  const sL = (text: string) => (
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase', margin: '14px 0 7px' }}>{text}</div>
+  )
+  const card = (children: React.ReactNode, style?: React.CSSProperties) => (
+    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 10, ...style }}>{children}</div>
+  )
+
+  // Compact table row helper
+  const row = (label: React.ReactNode, value: React.ReactNode, muted = false) => ({ label: muted ? <span style={{color:'var(--ink3)'}}>{label}</span> : label, value })
+  const subtotalRow = (label: string, value: string) => ({ label, value, type: 'subtotal' as const })
+  const totalRow = (label: string, value: React.ReactNode) => ({ label, value, type: 'total' as const })
 
   function CompTable({ type, dateLabel }: { type: 'forsale'|'sold'|'auction'; dateLabel: string }) {
     const comps = fByDate(prop.comparables?.[type] || [])
@@ -122,11 +175,13 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
           <tbody>
             {comps.map((c, i) => (
               <tr key={c.id}>
-                <td style={td}><div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div></td>
+                <td style={td}>
+                  <div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div>
+                </td>
                 <td style={td}><div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.address}</div><div style={{fontSize:10,color:'var(--ink3)'}}>{c.postcode}</div></td>
                 <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date}</td>
                 <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
-                <td style={{...td,fontSize:11}}>{c.psf?'£'+c.psf:'—'}</td>
+                <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -135,30 +190,19 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
     )
   }
 
-  const th: React.CSSProperties = { padding: '5px 5px', borderBottom: '1px solid var(--border)', color: 'var(--ink3)', fontWeight: 500, fontSize: 11, textAlign: 'left' }
-  const td: React.CSSProperties = { padding: '6px 5px', borderBottom: '1px solid var(--cream2)', verticalAlign: 'middle' }
-
-  const sectionLabel = (text: string) => (
-    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase', margin: '14px 0 7px' }}>{text}</div>
-  )
-
-  const card = (children: React.ReactNode, style?: React.CSSProperties) => (
-    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 10, ...style }}>{children}</div>
-  )
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--cream)', zIndex: 150, display: 'flex', flexDirection: 'column', maxWidth: 430, left: '50%', transform: 'translateX(-50%)' }}>
 
-      {/* Top bar */}
+      {/* ── Top bar ── */}
       <div style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 'max(10px,env(safe-area-inset-top,10px))' }}>
-        <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink2)', flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)',flexShrink:0 }}>
           <i className="ti ti-arrow-left" style={{ fontSize: 15 }} />
         </button>
-        <span style={{ fontFamily: "'DM Serif Display',serif", fontSize: 15, flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prop.address || 'Property'}</span>
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+        <span style={{ fontFamily:"'DM Serif Display',serif",fontSize:15,flex:1,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis' }}>{prop.address || 'Property'}</span>
+        <div style={{ display:'flex',gap:6,flexShrink:0 }}>
           {prop.url && <button onClick={() => window.open(prop.url,'_blank')} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)' }}><i className="ti ti-external-link" /></button>}
           <button onClick={() => setClOpen(true)} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)' }}><i className="ti ti-history" /></button>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position:'relative' }}>
             <button onClick={() => setOvfOpen(!ovfOpen)} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)' }}><i className="ti ti-dots" /></button>
             {ovfOpen && (
               <div style={{ position:'absolute',top:38,right:0,background:'#fff',border:'1px solid var(--border)',borderRadius:10,zIndex:10,minWidth:140,overflow:'hidden',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
@@ -170,22 +214,22 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--cream)', flexShrink: 0 }}>
+      {/* ── Tabs ── */}
+      <div style={{ display:'flex',borderBottom:'1px solid var(--border)',background:'var(--cream)',flexShrink:0 }}>
         {(['overview','comparables','resale'] as const).map((t, i) => (
-          <div key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '9px 4px', textAlign: 'center', fontSize: 11, fontWeight: 500, cursor: 'pointer', borderBottom: `2px solid ${tab===t?'var(--accent)':'transparent'}`, color: tab===t?'var(--accent)':'var(--ink3)', whiteSpace: 'nowrap' }}>
+          <div key={t} onClick={() => setTab(t)} style={{ flex:1,padding:'9px 4px',textAlign:'center',fontSize:11,fontWeight:500,cursor:'pointer',borderBottom:`2px solid ${tab===t?'var(--accent)':'transparent'}`,color:tab===t?'var(--accent)':'var(--ink3)',whiteSpace:'nowrap' }}>
             {['Overview & Financials','Comparables','Sale & Resale'][i]}
           </div>
         ))}
       </div>
 
-      {/* Tab content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 80px' }}>
+      {/* ── Tab content ── */}
+      <div style={{ flex:1,overflowY:'auto',padding:'12px 16px 80px' }}>
 
-        {/* ── TAB 1: OVERVIEW & FINANCIALS ── */}
+        {/* ════ TAB 1: OVERVIEW & FINANCIALS ════ */}
         {tab === 'overview' && (
           <>
-            {sectionLabel('Property details')}
+            {sL('Property details')}
             {card(<>
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11 }}>
                 <FormRow label="Address"><Input value={prop.address||''} onChange={e=>up({address:e.target.value})} /></FormRow>
@@ -197,11 +241,11 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               </div>
               <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11 }}>
                 <FormRow label="Sq ft">
-                  <Input type="number" value={prop.sqft||''} onChange={e=>up({sqft:+e.target.value})} />
+                  <Input type="number" value={prop.sqft||''} onChange={e => onSqftChange(+e.target.value)} placeholder="e.g. 850" />
                   {prop.sqft && prop.listPrice ? <div style={{fontSize:11,color:'var(--ink3)',marginTop:2}}>£{Math.round(prop.listPrice/prop.sqft)}/sqft</div> : null}
                 </FormRow>
                 <FormRow label="Sq m">
-                  <Input type="number" value={prop.sqm||''} onChange={e=>up({sqm:+e.target.value})} />
+                  <Input type="number" value={prop.sqm||''} onChange={e => onSqmChange(+e.target.value)} placeholder="e.g. 79" />
                   {prop.sqm && prop.listPrice ? <div style={{fontSize:11,color:'var(--ink3)',marginTop:2}}>£{Math.round(prop.listPrice/prop.sqm)}/sqm</div> : null}
                 </FormRow>
               </div>
@@ -213,7 +257,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               <FormRow label="Tags"><Input value={prop.tags||''} onChange={e=>up({tags:e.target.value})} placeholder="Leasehold, Needs work…" /></FormRow>
             </>)}
 
-            {sectionLabel('Price history')}
+            {sL('Price history')}
             {card(
               !prop.priceHistory?.length
                 ? <div style={{fontSize:12,color:'var(--ink3)',textAlign:'center',padding:6}}>No history yet</div>
@@ -221,7 +265,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                     const prev = i > 0 ? arr[i-1].price : null
                     const mv = prev !== null ? h.price - prev : null
                     return (
-                      <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom: i<arr.length-1?'1px solid var(--cream2)':'none',fontSize:12}}>
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<arr.length-1?'1px solid var(--cream2)':'none',fontSize:12}}>
                         <span style={{color:'var(--ink2)',minWidth:82}}>{h.date}</span>
                         <span style={{fontWeight:500,flex:1}}>{gbp(h.price)}</span>
                         {mv !== null && mv !== 0 && <span style={{fontSize:11,padding:'2px 6px',borderRadius:99,background:mv>0?'var(--red-bg)':'var(--green-bg)',color:mv>0?'var(--red)':'var(--green)'}}>{mv>0?'+':''}{gbp(mv)}</span>}
@@ -234,15 +278,15 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               <i className="ti ti-plus" style={{fontSize:12}} /> Add price point
             </button>
 
-            {sectionLabel('Rental estimate')}
+            {sL('Rental estimate')}
             {card(<>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                 <label style={{fontSize:13,color:'var(--ink2)'}}>Monthly rent estimate</label>
-                <CInput type="number" value={prop.rent||''} onChange={e=>up({rent:+e.target.value})} placeholder="0" />
+                <TInput value={prop.rent||''} onChange={v=>up({rent:v})} />
               </div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: yld ? 8 : 0}}>
                 <label style={{fontSize:13,color:'var(--ink2)'}}>Annual running costs</label>
-                <CInput type="number" value={prop.runningCosts||''} onChange={e=>up({runningCosts:+e.target.value})} placeholder="0" />
+                <TInput value={prop.runningCosts||''} onChange={v=>up({runningCosts:v})} />
               </div>
               {yld && <>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',background:'var(--green-bg)',borderRadius:6,marginBottom:5}}>
@@ -256,32 +300,33 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               </>}
             </>)}
 
-            {sectionLabel('Offer considerations')}
+            {sL('Offer considerations')}
             {card(<>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                 <label style={{fontSize:13,color:'var(--ink2)'}}>Offer price</label>
-                <CInput type="number" value={prop.offerPrice||''} onChange={e=>up({offerPrice:+e.target.value})} placeholder="0" />
+                <TInput value={prop.offerPrice||''} onChange={v=>up({offerPrice:v})} />
               </div>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
                 <label style={{fontSize:13,color:'var(--ink2)'}}>Potential resale price</label>
-                <CInput type="number" value={prop.resaleEst||''} onChange={e=>up({resaleEst:+e.target.value})} placeholder="0" />
+                <TInput value={prop.resaleEst||''} onChange={v=>up({resaleEst:v})} />
               </div>
               <CalcTable rows={[
-                {label:'Offer price',value:gbp(prop.offerPrice)},
-                {label:'Purchase fees',value:gbp(totalFees)},
-                {label:'Renovation cost',value:gbp(renoTotal)},
-                {label:'Sub-total',value:gbp(sub),type:'subtotal'},
-                {label:'Lease extension',value:gbp(lease.total)},
-                {label:'Total cost',value:gbp(totalCost),type:'subtotal'},
-                {label:'Financing costs',value:gbp(fin.total)},
-                {label:'Cost after finance',value:gbp(caf),type:'subtotal'},
-                {label:'Potential resale',value:gbp(prop.resaleEst)},
-                {label:'Profit before finance',value:gbp(pbf)},
-                {label:<span>Profit after finance</span>,value:<span style={{color:paf>=0?'var(--green)':'var(--red)'}}>{gbp(paf)}</span>,type:'total'},
+                row('Offer price', <Val>{gbp(prop.offerPrice)}</Val>, true),
+                row('Stamp duty (SDLT)', <Val>{gbp(sdlt.total)}</Val>, true),
+                row('Other purchase fees', <Val>{gbp(otherFees)}</Val>, true),
+                row('Renovation cost', <Val>{gbp(renoTotal)}</Val>, true),
+                subtotalRow('Sub-total', gbp(sub)),
+                row('Lease extension', <Val>{gbp(lease.total)}</Val>, true),
+                subtotalRow('Total cost', gbp(totalCost)),
+                row('Financing costs', <Val>{gbp(fin.total)}</Val>, true),
+                subtotalRow('Cost after finance', gbp(caf)),
+                row('Potential resale', <Val>{gbp(prop.resaleEst)}</Val>, true),
+                row('Profit before finance', <Val>{gbp(pbf)}</Val>, true),
+                totalRow('Profit after finance', <Val colour={paf>=0?'var(--green)':'var(--red)'}>{gbp(paf)}</Val>),
               ]} />
             </>)}
 
-            {sectionLabel('Sensitivity analysis')}
+            {sL('Sensitivity analysis')}
             {card(<>
               <div style={{fontSize:11,color:'var(--ink3)',marginBottom:6}}>Profit after finance at offer price ±%</div>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
@@ -290,92 +335,139 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               </table>
             </>)}
 
+            {/* ── STAMP DUTY — shown separately ── */}
+            <Collapsible title="Stamp duty (SDLT)">
+              <CalcTable rows={[
+                ...sdlt.breakdown.map(b => row(
+                  <span style={{fontSize:11}}>{b.band} @ {b.rate}%</span>,
+                  <Val>{gbp(b.tax)}</Val>,
+                  true
+                )),
+                totalRow('Total SDLT', <Val>{gbp(sdlt.total)}</Val>),
+              ]} />
+            </Collapsible>
+
+            {/* ── PURCHASE FEES (excl. SDLT) ── */}
             <Collapsible title="Purchase fees">
               <CalcTable rows={[
-                {label:'Stamp duty (SDLT)',value:gbp(sdlt.total)},
-                {label:<span style={{fontSize:11,color:'var(--ink3)'}}>{sdlt.breakdown.map(b=>`${b.band} @ ${b.rate}% = ${gbp(b.tax)}`).join(' | ')}</span>,value:''},
-                {label:`Auction fee (${assumptions.defAF}%)`,value:gbp(af)},
-                {label:<span>Special conditions (<input value={scPct} type="number" onChange={e=>up({purchaseFees:{...prop.purchaseFees,specialConditionsPct:+e.target.value}})} style={{width:36,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:3,padding:'2px 4px',fontSize:11,textAlign:'right',fontFamily:"'DM Sans',sans-serif",outline:'none'}} />%)</span>,value:gbp(sc)},
-                {label:'Legal fees',value:gbp(assumptions.defLegal)},
-                ...extraPFRows.map(r=>({label:<input value={r.label} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}}/>,value:<CInput type="number" value={r.value} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,value:e.target.value}:x))} style={{width:80}} />})),
-                {label:'Total fees',value:gbp(totalFees),type:'total'},
+                row(`Auction fee (${assumptions.defAF}%)`, <Val>{gbp(af)}</Val>, true),
+                row(
+                  <span style={{display:'flex',alignItems:'center',gap:4,fontSize:13}}>
+                    Special conditions
+                    <input
+                      value={scPct || ''}
+                      type="number"
+                      placeholder="0"
+                      onChange={e=>up({purchaseFees:{...prop.purchaseFees,specialConditionsPct:+e.target.value}})}
+                      style={{width:36,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:3,padding:'2px 4px',fontSize:11,textAlign:'right',fontFamily:"'DM Sans',sans-serif",outline:'none'}}
+                    />
+                    <span style={{fontSize:11,color:'var(--ink3)'}}>%</span>
+                  </span>,
+                  <Val>{gbp(sc)}</Val>,
+                  true
+                ),
+                row('Legal fees', <Val>{gbp(assumptions.defLegal)}</Val>, true),
+                ...extraPFRows.map(r => row(
+                  <input value={r.label} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}} />,
+                  <TInput value={r.value} onChange={v=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,value:String(v)}:x))} />
+                )),
+                totalRow('Total purchase fees', <Val>{gbp(otherFees)}</Val>),
               ]} />
               <button onClick={()=>setExtraPFRows(r=>[...r,{id:uid(),label:'',value:''}])} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
                 <i className="ti ti-plus" style={{fontSize:11}} /> Add item
               </button>
             </Collapsible>
 
+            {/* ── RENOVATION ── */}
             <Collapsible title="Renovation costs">
               <CalcTable rows={[
-                ...(['paint','kitchen','bathroom','electrics','boiler','windows','builder'] as const).map(k=>({
-                  label:{'paint':'Painting & decorating','kitchen':'Kitchen','bathroom':'Bathroom','electrics':'Electrics','boiler':'Boiler','windows':'New windows','builder':"Builder's estimate"}[k],
-                  value:<CInput type="number" value={prop.renovation?.[k]||0} onChange={e=>up({renovation:{...prop.renovation,[k]:+e.target.value}})} />
-                })),
-                ...extraRenoRows.map(r=>({
-                  label:<input value={r.label} onChange={e=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}}/>,
-                  value:<CInput type="number" value={r.value} onChange={e=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,value:e.target.value}:x))} />
-                })),
-                {label:'Total estimate',value:gbp(renoBase),type:'subtotal'},
-                {label:<label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,cursor:'pointer'}}><input type="checkbox" checked={renoVat} onChange={e=>setRenoVat(e.target.checked)} /> Incl. VAT ({assumptions.vatRate}%)</label>,value:renoVat?gbp(renoTotal):'—'},
+                ...(['paint','kitchen','bathroom','electrics','boiler','windows','builder'] as const).map(k => row(
+                  ({'paint':'Painting & decorating','kitchen':'Kitchen','bathroom':'Bathroom','electrics':'Electrics','boiler':'Boiler','windows':'New windows','builder':"Builder's estimate"} as Record<string,string>)[k],
+                  <TInput value={prop.renovation?.[k]||''} onChange={v=>up({renovation:{...prop.renovation,[k]:v}})} />
+                )),
+                ...extraRenoRows.map(r => row(
+                  <input value={r.label} onChange={e=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}} />,
+                  <TInput value={r.value} onChange={v=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,value:String(v)}:x))} />
+                )),
+                subtotalRow('Total estimate', gbp(renoBase)),
+                row(
+                  <label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,cursor:'pointer'}}>
+                    <input type="checkbox" checked={renoVat} onChange={e=>setRenoVat(e.target.checked)} />
+                    Incl. VAT ({assumptions.vatRate}%)
+                  </label>,
+                  renoVat ? <Val>{gbp(renoTotal)}</Val> : <span style={{color:'var(--ink3)'}}>—</span>
+                ),
               ]} />
               <button onClick={()=>setExtraRenoRows(r=>[...r,{id:uid(),label:'',value:''}])} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
                 <i className="ti ti-plus" style={{fontSize:11}} /> Add item
               </button>
             </Collapsible>
 
+            {/* ── LEASE EXTENSION ── */}
             <Collapsible title="Lease extension">
               <CalcTable rows={[
-                {label:'Cost of extending',value:<CInput type="number" value={prop.leaseExtension?.cost||0} onChange={e=>up({leaseExtension:{...prop.leaseExtension,cost:+e.target.value}})} />},
-                {label:'SDLT on extension (5%)',value:gbp(lease.sdlt)},
-                {label:'Legal fees',value:<CInput type="number" value={prop.leaseExtension?.legal||1500} onChange={e=>up({leaseExtension:{...prop.leaseExtension,legal:+e.target.value}})} />},
-                {label:'Total',value:gbp(lease.total),type:'total'},
+                row('Cost of extending', <TInput value={prop.leaseExtension?.cost||''} onChange={v=>up({leaseExtension:{...prop.leaseExtension,cost:v}})} />),
+                row('SDLT on extension (5%)', <Val>{gbp(lease.sdlt)}</Val>, true),
+                row('Legal fees', <TInput value={prop.leaseExtension?.legal||''} onChange={v=>up({leaseExtension:{...prop.leaseExtension,legal:v}})} placeholder="0" />),
+                totalRow('Total', <Val>{gbp(lease.total)}</Val>),
               ]} />
             </Collapsible>
 
+            {/* ── FINANCING ── */}
             <Collapsible title="Financing charges">
               <CalcTable rows={[
-                {label:'Loan amount',value:<CInput type="number" value={prop.financing?.loan||''} onChange={e=>up({financing:{...prop.financing,loan:+e.target.value}})} />},
-                {label:'Interest rate (%)',value:<CInput type="number" value={prop.financing?.rate||assumptions.defRate} onChange={e=>up({financing:{...prop.financing,rate:+e.target.value}})} />},
-                {label:'Annual interest',value:gbp(fin.annual)},
-                {label:'Monthly interest',value:gbp(fin.monthly)},
-                {label:'Months to complete',value:<CInput type="number" value={prop.financing?.months||6} onChange={e=>up({financing:{...prop.financing,months:+e.target.value}})} />},
-                {label:'Financing cost',value:gbp(fin.total),type:'total'},
+                row(
+                  <span style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                    Loan amount
+                    {loanOverride
+                      ? <span onClick={()=>{setLoanOverride(false);up({financing:{...prop.financing,loan:autoLoan}})}} style={{fontSize:10,color:'var(--accent)',cursor:'pointer',textDecoration:'underline'}}>reset to auto</span>
+                      : <span style={{fontSize:10,color:'var(--ink3)'}}>= total cost</span>
+                    }
+                  </span>,
+                  <TInput
+                    value={loanOverride ? (prop.financing?.loan||'') : autoLoan}
+                    onChange={v=>{setLoanOverride(true);up({financing:{...prop.financing,loan:v}})}}
+                  />,
+                  true
+                ),
+                row('Interest rate (%)', <TInput value={prop.financing?.rate||assumptions.defRate} onChange={v=>up({financing:{...prop.financing,rate:v}})} />),
+                row('Annual interest', <Val>{gbp(fin.annual)}</Val>, true),
+                row('Monthly interest', <Val>{gbp(fin.monthly)}</Val>, true),
+                row('Months to complete', <TInput value={prop.financing?.months||6} onChange={v=>up({financing:{...prop.financing,months:v}})} />),
+                totalRow('Financing cost', <Val>{gbp(fin.total)}</Val>),
               ]} />
             </Collapsible>
 
-            {sectionLabel('Notes')}
+            {sL('Notes')}
             <Textarea value={prop.notes||''} onChange={e=>up({notes:e.target.value})} placeholder="Add notes about this property…" style={{minHeight:100,marginBottom:16}} />
           </>
         )}
 
-        {/* ── TAB 2: COMPARABLES ── */}
+        {/* ════ TAB 2: COMPARABLES ════ */}
         {tab === 'comparables' && (
           <>
-            {/* Market summary */}
             <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:10,padding:12,marginBottom:10}}>
               <div style={{fontSize:12,fontWeight:600,color:'var(--ink)',marginBottom:8}}>Market summary — ticked comparables</div>
               <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:3}}>
                 {['','High','Mid','Low'].map(h=><div key={h} style={{fontSize:10,color:'var(--ink3)',textAlign:'center',fontWeight:500,padding:3}}>{h}</div>)}
-                {[['For sale',msFS],['Sold',msS],['Auction',msA]].map(([lbl,s]:any)=>[
+                {([['For sale',msFS],['Sold',msS],['Auction',msA]] as const).map(([lbl,s]:any)=>[
                   <div key={lbl} style={{fontSize:11,color:'var(--ink2)',display:'flex',alignItems:'center'}}>{lbl}</div>,
                   ...(['h','m','l'] as const).map(k=><div key={k} style={{fontSize:11,fontWeight:600,textAlign:'center',padding:'4px 2px',background:'#fff',borderRadius:4,border:'1px solid var(--border)'}}>{s[k]}</div>)
                 ])}
               </div>
             </div>
 
-            {/* Date filter */}
             <div style={{display:'flex',gap:5,marginBottom:10}}>
               {([['all','All dates'],['12','Last 12 months'],['24','Last 24 months']] as const).map(([f,lbl])=>(
                 <span key={f} onClick={()=>setCompDateFilter(f)} style={{background:compDateFilter===f?'var(--accent)':'var(--cream2)',border:`1px solid ${compDateFilter===f?'var(--accent)':'var(--border)'}`,color:compDateFilter===f?'#fff':'var(--ink2)',borderRadius:99,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>{lbl}</span>
               ))}
             </div>
 
-            {/* Map */}
             <ComparablesMapDynamic subjectPostcode={prop.postcode} subjectAddress={prop.address} comparables={prop.comparables||{forsale:[],sold:[],auction:[]}} />
 
             {[{type:'forsale' as const,label:'For sale',dateLabel:'Listed'},{type:'sold' as const,label:'Sold',dateLabel:'Sold'},{type:'auction' as const,label:'Sold at auction',dateLabel:'Sold'}].map(({type,label,dateLabel})=>(
               <div key={type}>
-                {sectionLabel(label)}
+                {sL(label)}
                 <CompTable type={type} dateLabel={dateLabel} />
                 <button onClick={()=>{setCompType(type);setAddCompOpen(true)}} style={{width:'100%',fontSize:13,marginBottom:12,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'10px 14px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
                   <i className="ti ti-plus" style={{fontSize:12}} /> Add comparable
@@ -385,10 +477,10 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
           </>
         )}
 
-        {/* ── TAB 3: SALE & RESALE ── */}
+        {/* ════ TAB 3: SALE & RESALE ════ */}
         {tab === 'resale' && (
           <>
-            {sectionLabel('Sale details')}
+            {sL('Sale details')}
             {card(<>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                 <FormRow label="Final sold price"><Input type="number" value={prop.finalSoldPrice||''} onChange={e=>up({finalSoldPrice:+e.target.value})} placeholder="0" /></FormRow>
@@ -396,7 +488,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               </div>
             </>)}
 
-            {sectionLabel('Resale')}
+            {sL('Resale')}
             {card(<>
               <FormRow label="Target resale price"><Input type="number" value={prop.targetResale||''} onChange={e=>up({targetResale:+e.target.value})} placeholder="0" /></FormRow>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -405,7 +497,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               </div>
             </>)}
 
-            {sectionLabel('Implied outcome')}
+            {sL('Implied outcome')}
             {card(
               (!prop.finalSoldPrice && !prop.targetResale && !prop.actualResale)
                 ? <div style={{fontSize:12,color:'var(--ink3)'}}>Enter prices to see implied outcome</div>
@@ -427,7 +519,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
         )}
       </div>
 
-      {/* ── SHEETS ── */}
+      {/* ════ SHEETS ════ */}
       <Sheet open={archiveOpen} onClose={()=>setArchiveOpen(false)} title="Archive property"
         footer={<><Btn onClick={()=>setArchiveOpen(false)}>Cancel</Btn><Btn variant="primary" full onClick={()=>{archiveProperty(propertyId,archiveOutcome,archiveReason);setArchiveOpen(false);onClose()}}>Archive</Btn></>}>
         <FormRow label="Outcome">
@@ -450,7 +542,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
         </div>
       </Sheet>
 
-      <Sheet open={addCompOpen} onClose={()=>setAddCompOpen(false)} title={{forsale:'Add for-sale comparable',sold:'Add sold comparable',auction:'Add auction comparable'}[compType]}
+      <Sheet open={addCompOpen} onClose={()=>setAddCompOpen(false)} title={({forsale:'Add for-sale comparable',sold:'Add sold comparable',auction:'Add auction comparable'})[compType]}
         footer={<><Btn onClick={()=>setAddCompOpen(false)}>Cancel</Btn><Btn variant="primary" full onClick={addComp}>Add</Btn></>}>
         <FormRow label="Address"><Input value={compForm.address} onChange={e=>setCompForm(s=>({...s,address:e.target.value}))} /></FormRow>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
