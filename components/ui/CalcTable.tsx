@@ -8,30 +8,41 @@ interface Row {
 
 export function CalcTable({ rows }: { rows: Row[] }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+    <table style={{
+      width: '100%',
+      borderCollapse: 'collapse',
+      background: '#fff',
+      borderRadius: 14,
+      overflow: 'hidden',
+      border: '1px solid var(--border)',
+      marginBottom: 12,
+      fontSize: 12,
+    }}>
       <tbody>
         {rows.map((r, i) => {
-          const isAccent = r.type === 'subtotal' || r.type === 'total'
+          const isSub = r.type === 'subtotal'
+          const isTotal = r.type === 'total'
+          const isAccent = isSub || isTotal
+          const rowStyle: React.CSSProperties = {
+            borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none',
+            background: isAccent ? 'var(--cream2)' : '#fff',
+          }
           const labelStyle: React.CSSProperties = {
-            padding: '6px 4px',
-            borderBottom: r.type === 'total' ? 'none' : '1px solid var(--cream2)',
-            borderTop: isAccent ? (r.type === 'total' ? '1.5px solid var(--border)' : '1px solid var(--border)') : undefined,
-            color: isAccent ? 'var(--ink)' : 'var(--ink3)',
-            fontWeight: isAccent ? 600 : 400,
-            fontSize: r.type === 'total' ? 14 : 13,
-            paddingTop: isAccent ? 7 : 6,
+            padding: '6px 10px',
+            verticalAlign: 'middle',
+            whiteSpace: 'nowrap',
+            color: isAccent ? 'var(--ink)' : 'var(--ink2)',
+            fontWeight: isTotal ? 700 : isSub ? 600 : 400,
+            width: '55%',
           }
           const valueStyle: React.CSSProperties = {
-            padding: '6px 4px',
+            padding: '6px 10px',
+            verticalAlign: 'middle',
             textAlign: 'right',
-            borderBottom: r.type === 'total' ? 'none' : '1px solid var(--cream2)',
-            borderTop: isAccent ? (r.type === 'total' ? '1.5px solid var(--border)' : '1px solid var(--border)') : undefined,
-            fontWeight: isAccent ? 700 : 500,
-            fontSize: r.type === 'total' ? 14 : 13,
-            paddingTop: isAccent ? 7 : 6,
+            fontWeight: isTotal ? 700 : isSub ? 600 : 500,
           }
           return (
-            <tr key={i}>
+            <tr key={i} style={rowStyle}>
               <td style={labelStyle}>{r.label}</td>
               <td style={valueStyle}>{r.value}</td>
             </tr>

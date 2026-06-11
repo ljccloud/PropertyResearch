@@ -71,7 +71,7 @@ export function ComparablesMap({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'no-postcode' | 'error'>('loading')
-  const apiKey = process.env.NEXT_PUBLIC_STADIA_API_KEY || ''
+
 
   useEffect(() => {
     if (!subjectPostcode) { setStatus('no-postcode'); return }
@@ -110,15 +110,11 @@ export function ComparablesMap({
       })
       mapRef.current = map
 
-      // Stadia Alidade Smooth Light tiles
-      const tileUrl = apiKey
-        ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
-        : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png'
-
-      L.tileLayer(tileUrl, {
+      // CartoDB Positron tiles — free, no account, no API key required
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         minZoom: 10,
         maxZoom: 18,
-        attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
       }).addTo(map)
 
       // Helper: coloured circle DivIcon

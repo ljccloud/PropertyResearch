@@ -147,14 +147,14 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
   }
 
   // ── Style helpers ─────────────────────────────────────────────
-  const th: React.CSSProperties = { padding: '5px', borderBottom: '1px solid var(--border)', color: 'var(--ink3)', fontWeight: 500, fontSize: 11, textAlign: 'left' }
-  const td: React.CSSProperties = { padding: '6px 5px', borderBottom: '1px solid var(--cream2)', verticalAlign: 'middle' }
+  const th: React.CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--border)', color: 'var(--ink3)', fontWeight: 700, fontSize: 10, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '.05em', background: 'var(--cream2)' }
+  const td: React.CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
 
   const sL = (text: string) => (
-    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink3)', letterSpacing: '.08em', textTransform: 'uppercase', margin: '14px 0 7px' }}>{text}</div>
+    <div style={{ margin: '22px 0 12px', paddingBottom: 8, borderBottom: '1px solid var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{text}</div>
   )
   const card = (children: React.ReactNode, style?: React.CSSProperties) => (
-    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 10, ...style }}>{children}</div>
+    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '10px 12px', marginBottom: 12, ...style }}>{children}</div>
   )
 
   // Compact table row helper
@@ -226,36 +226,108 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
       {/* ── Tab content ── */}
       <div style={{ flex:1,overflowY:'auto',padding:'12px 16px 80px' }}>
 
-        {/* ════ TAB 1: OVERVIEW & FINANCIALS ════ */}
+        {/* TAB 1: OVERVIEW & FINANCIALS */}
         {tab === 'overview' && (
           <>
-            {sL('Property details')}
-            {card(<>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11 }}>
-                <FormRow label="Address"><Input value={prop.address||''} onChange={e=>up({address:e.target.value})} /></FormRow>
-                <FormRow label="Postcode"><Input value={prop.postcode||''} onChange={e=>up({postcode:e.target.value})} /></FormRow>
+            {/* SUMMARY TILE */}
+            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px 12px', marginBottom: 8 }}>
+              <input
+                value={prop.address||''}
+                onChange={e=>up({address:e.target.value})}
+                placeholder="Address"
+                style={{ width:'100%', fontFamily:"'DM Serif Display',serif", fontSize:17, color:'var(--ink)', background:'none', border:'none', outline:'none', marginBottom:2, padding:0 }}
+              />
+              <input
+                value={prop.postcode||''}
+                onChange={e=>up({postcode:e.target.value})}
+                placeholder="Postcode"
+                style={{ width:'100%', fontSize:12, color:'var(--ink3)', background:'none', border:'none', outline:'none', marginBottom:10, padding:0, fontFamily:"'DM Sans',sans-serif" }}
+              />
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
+                <div
+                  onClick={() => {
+                    const tags = (prop.tags||'').split(',').map((t: string)=>t.trim()).filter(Boolean)
+                    const hasAuction = tags.some((t: string)=>t.toLowerCase()==='auction')
+                    const newTags = hasAuction ? tags.filter((t: string)=>t.toLowerCase()!=='auction') : [...tags,'Auction']
+                    up({ tags: newTags.join(', ') })
+                  }}
+                  style={{ display:'inline-flex', alignItems:'center', gap:4, borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid', background:(prop.tags||'').toLowerCase().includes('auction')?'var(--amber-bg)':'var(--cream2)', borderColor:(prop.tags||'').toLowerCase().includes('auction')?'#D4A800':'var(--border)', color:(prop.tags||'').toLowerCase().includes('auction')?'var(--amber)':'var(--ink3)' }}
+                >
+                  <i className="ti ti-gavel" style={{fontSize:10}} /> Auction
+                </div>
+                <div
+                  onClick={() => {
+                    const tags = (prop.tags||'').split(',').map((t: string)=>t.trim()).filter(Boolean)
+                    const hasLease = tags.some((t: string)=>t.toLowerCase()==='leasehold')
+                    const newTags = hasLease ? tags.filter((t: string)=>t.toLowerCase()!=='leasehold') : [...tags,'Leasehold']
+                    up({ tags: newTags.join(', ') })
+                  }}
+                  style={{ display:'inline-flex', alignItems:'center', gap:4, borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid', background:(prop.tags||'').toLowerCase().includes('leasehold')?'var(--blue-bg)':'var(--cream2)', borderColor:(prop.tags||'').toLowerCase().includes('leasehold')?'#5A8AC0':'var(--border)', color:(prop.tags||'').toLowerCase().includes('leasehold')?'var(--blue)':'var(--ink3)' }}
+                >
+                  <i className="ti ti-building-estate" style={{fontSize:10}} /> Leasehold
+                </div>
+                {(prop.tags||'').toLowerCase().includes('leasehold') && (
+                  <div style={{ display:'inline-flex', alignItems:'center', gap:4, borderRadius:99, padding:'3px 10px', fontSize:11, border:'1px solid var(--border)', background:'var(--cream2)', color:'var(--ink2)' }}>
+                    <input
+                      type="number"
+                      value={(prop as any).leaseYears||''}
+                      onChange={e=>up({leaseYears:+e.target.value} as any)}
+                      placeholder="Yrs"
+                      onClick={e=>e.stopPropagation()}
+                      style={{ width:40, background:'none', border:'none', outline:'none', fontSize:11, fontFamily:"'DM Sans',sans-serif", color:'var(--ink2)', padding:0, textAlign:'center' }}
+                    />
+                    <span style={{color:'var(--ink3)'}}>yrs left</span>
+                  </div>
+                )}
+                {(prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold').map((t: string)=>(
+                  <span key={t} style={{ display:'inline-flex', alignItems:'center', borderRadius:99, padding:'3px 10px', fontSize:11, background:'var(--cream2)', border:'1px solid var(--border)', color:'var(--ink2)' }}>{t}</span>
+                ))}
               </div>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11 }}>
-                <FormRow label="Listing price"><Input type="number" value={prop.listPrice||''} onChange={e=>up({listPrice:+e.target.value})} /></FormRow>
-                <FormRow label="Date listed"><Input type="date" value={prop.dateListed||''} onChange={e=>up({dateListed:e.target.value})} /></FormRow>
+              <FormRow label="Listing URL"><Input value={prop.url||''} onChange={e=>up({url:e.target.value})} placeholder="https://rightmove.co.uk/..." /></FormRow>
+              <FormRow label="Other tags"><Input
+                value={(prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold').join(', ')}
+                onChange={e=>{
+                  const base = (prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t.toLowerCase()==='auction'||t.toLowerCase()==='leasehold')
+                  const extra = e.target.value.split(',').map((t: string)=>t.trim()).filter(Boolean)
+                  up({tags:[...base,...extra].join(', ')})
+                }}
+                placeholder="Needs work, Chain free..."
+              /></FormRow>
+            </div>
+
+            {/* FOUR METRIC TILES */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>List price</div>
+                <input type="number" value={prop.listPrice||''} onChange={e=>up({listPrice:+e.target.value})} placeholder="0" style={{ width:'100%', fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
+                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>
+                  <input type="date" value={prop.dateListed||''} onChange={e=>up({dateListed:e.target.value})} style={{ background:'none', border:'none', outline:'none', fontSize:11, color:'var(--ink3)', fontFamily:"'DM Sans',sans-serif", padding:0, width:'100%' }} />
+                </div>
               </div>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11 }}>
-                <FormRow label="Sq ft">
-                  <Input type="number" value={prop.sqft||''} onChange={e => onSqftChange(+e.target.value)} placeholder="e.g. 850" />
-                  {prop.sqft && prop.listPrice ? <div style={{fontSize:11,color:'var(--ink3)',marginTop:2}}>£{Math.round(prop.listPrice/prop.sqft)}/sqft</div> : null}
-                </FormRow>
-                <FormRow label="Sq m">
-                  <Input type="number" value={prop.sqm||''} onChange={e => onSqmChange(+e.target.value)} placeholder="e.g. 79" />
-                  {prop.sqm && prop.listPrice ? <div style={{fontSize:11,color:'var(--ink3)',marginTop:2}}>£{Math.round(prop.listPrice/prop.sqm)}/sqm</div> : null}
-                </FormRow>
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>Sq ft</div>
+                <input type="number" value={prop.sqft||''} onChange={e=>onSqftChange(+e.target.value)} placeholder="0" style={{ width:'100%', fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
+                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>
+                  {prop.sqft && prop.listPrice ? <span style={{color:'var(--accent)'}}>{`${Math.round(prop.listPrice/prop.sqft)}/sqft`}</span> : <span style={{opacity:0.35}}>--/sqft</span>}
+                </div>
               </div>
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11 }}>
-                <FormRow label="Beds"><Input type="number" value={prop.beds||''} onChange={e=>up({beds:+e.target.value})} /></FormRow>
-                <FormRow label="Baths"><Input type="number" value={prop.baths||''} onChange={e=>up({baths:+e.target.value})} /></FormRow>
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>Sq m</div>
+                <input type="number" value={prop.sqm||''} onChange={e=>onSqmChange(+e.target.value)} placeholder="0" style={{ width:'100%', fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
+                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>
+                  {prop.sqm && prop.listPrice ? <span style={{color:'var(--accent)'}}>{`${Math.round(prop.listPrice/prop.sqm)}/sqm`}</span> : <span style={{opacity:0.35}}>--/sqm</span>}
+                </div>
               </div>
-              <FormRow label="Listing URL"><Input value={prop.url||''} onChange={e=>up({url:e.target.value})} placeholder="https://rightmove.co.uk/…" /></FormRow>
-              <FormRow label="Tags"><Input value={prop.tags||''} onChange={e=>up({tags:e.target.value})} placeholder="Leasehold, Needs work…" /></FormRow>
-            </>)}
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>Beds / Baths</div>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <input type="number" value={prop.beds||''} onChange={e=>up({beds:+e.target.value})} placeholder="0" style={{ width:40, fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
+                  <span style={{ fontSize:15, color:'var(--ink3)', fontWeight:300 }}>/</span>
+                  <input type="number" value={prop.baths||''} onChange={e=>up({baths:+e.target.value})} placeholder="0" style={{ width:40, fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
+                </div>
+                <div style={{ fontSize:10, fontWeight:500, color:'var(--ink3)', marginTop:3 }}>bed / bath</div>
+              </div>
+            </div>
 
             {sL('Price history')}
             {card(
@@ -277,28 +349,6 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
             <button onClick={() => setAddPhOpen(true)} style={{width:'100%',marginBottom:12,fontSize:13,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'10px 14px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
               <i className="ti ti-plus" style={{fontSize:12}} /> Add price point
             </button>
-
-            {sL('Rental estimate')}
-            {card(<>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-                <label style={{fontSize:13,color:'var(--ink2)'}}>Monthly rent estimate</label>
-                <TInput value={prop.rent||''} onChange={v=>up({rent:v})} />
-              </div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: yld ? 8 : 0}}>
-                <label style={{fontSize:13,color:'var(--ink2)'}}>Annual running costs</label>
-                <TInput value={prop.runningCosts||''} onChange={v=>up({runningCosts:v})} />
-              </div>
-              {yld && <>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',background:'var(--green-bg)',borderRadius:6,marginBottom:5}}>
-                  <span style={{fontSize:12,color:'var(--green)'}}>Gross yield</span>
-                  <span style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{pct(yld.gross)}</span>
-                </div>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',background:'var(--green-bg)',borderRadius:6}}>
-                  <span style={{fontSize:12,color:'var(--green)'}}>Net yield</span>
-                  <span style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{pct(yld.net)}</span>
-                </div>
-              </>}
-            </>)}
 
             {sL('Offer considerations')}
             {card(<>
@@ -326,11 +376,33 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               ]} />
             </>)}
 
+            {sL('Rental estimate')}
+            {card(<>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                <label style={{fontSize:13,color:'var(--ink2)'}}>Monthly rent estimate</label>
+                <TInput value={prop.rent||''} onChange={v=>up({rent:v})} />
+              </div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom: yld ? 8 : 0}}>
+                <label style={{fontSize:13,color:'var(--ink2)'}}>Annual running costs</label>
+                <TInput value={prop.runningCosts||''} onChange={v=>up({runningCosts:v})} />
+              </div>
+              {yld && <>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',background:'var(--green-bg)',borderRadius:6,marginBottom:5}}>
+                  <span style={{fontSize:12,color:'var(--green)'}}>Gross yield</span>
+                  <span style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{pct(yld.gross)}</span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 10px',background:'var(--green-bg)',borderRadius:6}}>
+                  <span style={{fontSize:12,color:'var(--green)'}}>Net yield</span>
+                  <span style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{pct(yld.net)}</span>
+                </div>
+              </>}
+            </>)}
+
             {sL('Sensitivity analysis')}
             {card(<>
               <div style={{fontSize:11,color:'var(--ink3)',marginBottom:6}}>Profit after finance at offer price ±%</div>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-                <thead><tr>{['−10%','−5%','Base','+5%','+10%'].map(h=><th key={h} style={{background:'var(--cream2)',padding:'5px 6px',textAlign:'center',fontSize:11,color:'var(--ink2)',fontWeight:500}}>{h}</th>)}</tr></thead>
+                <thead><tr>{['−10%','−5%','Base','+5%','+10%'].map(h=><th key={h} style={{background:'var(--cream2)',padding:'6px 10px',textAlign:'center',fontSize:11,color:'var(--ink2)',fontWeight:600,letterSpacing:'.02em'}}>{h}</th>)}</tr></thead>
                 <tbody><tr>{sensCells.map((c,i)=><td key={i} style={{padding:'5px 6px',textAlign:'center',borderBottom:'1px solid var(--cream2)',color:c.profit>=0?'var(--green)':'var(--red)'}}>{gbp(c.profit)}</td>)}</tr></tbody>
               </table>
             </>)}
@@ -446,13 +518,13 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
         {/* ════ TAB 2: COMPARABLES ════ */}
         {tab === 'comparables' && (
           <>
-            <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:10,padding:12,marginBottom:10}}>
+            <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:14,padding:12,marginBottom:10}}>
               <div style={{fontSize:12,fontWeight:600,color:'var(--ink)',marginBottom:8}}>Market summary — ticked comparables</div>
               <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:3}}>
                 {['','High','Mid','Low'].map(h=><div key={h} style={{fontSize:10,color:'var(--ink3)',textAlign:'center',fontWeight:500,padding:3}}>{h}</div>)}
                 {([['For sale',msFS],['Sold',msS],['Auction',msA]] as const).map(([lbl,s]:any)=>[
                   <div key={lbl} style={{fontSize:11,color:'var(--ink2)',display:'flex',alignItems:'center'}}>{lbl}</div>,
-                  ...(['h','m','l'] as const).map(k=><div key={k} style={{fontSize:11,fontWeight:600,textAlign:'center',padding:'4px 2px',background:'#fff',borderRadius:4,border:'1px solid var(--border)'}}>{s[k]}</div>)
+                  ...(['h','m','l'] as const).map(k=><div key={k} style={{fontSize:11,fontWeight:600,textAlign:'center',padding:'5px 4px',background:'#fff',borderRadius:8,border:'1px solid var(--border)'}}>{s[k]}</div>)
                 ])}
               </div>
             </div>

@@ -83,6 +83,8 @@ export interface Property {
   outcome: 'Purchased' | 'Passed' | 'Outbid' | ''
   archiveReason: string
   archivedDate: string
+  // Optional extras
+  leaseYears?: number
 }
 
 export interface PastSale {

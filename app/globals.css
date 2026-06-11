@@ -25,3 +25,13 @@
 
 html, body { height: 100%; overflow: hidden; background: var(--cream); }
 body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
+
+/* Reference style aliases — maps external variable names to our palette */
+:root {
+  --bd: var(--border);
+  --sf: #ffffff;
+  --sf2: var(--cream2);
+  --t2: var(--ink2);
+  --t3: var(--ink3);
+  --a: var(--accent);
+}
