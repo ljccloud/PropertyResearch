@@ -67,6 +67,8 @@ export interface Property {
   leaseExtension: LeaseExtension
   purchaseFees: {
     specialConditionsPct: number
+    auctionFeePct?: number
+    legalFees?: number
     extraItems: { label: string; value: number }[]
   }
   // History

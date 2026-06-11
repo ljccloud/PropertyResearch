@@ -78,12 +78,14 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
   // ── Calculations ──────────────────────────────────────────────
   const sdlt = calcSDLT(prop.offerPrice, assumptions.sdltType)
-  const af = Math.round(prop.offerPrice * (assumptions.defAF / 100))
+  const auctionFeePct = prop.purchaseFees?.auctionFeePct ?? assumptions.defAF
+  const af = Math.round(prop.offerPrice * (auctionFeePct / 100))
   const scPct = prop.purchaseFees?.specialConditionsPct || 0
   const sc = Math.round(prop.offerPrice * (scPct / 100))
   const extraPFTotal = extraPFRows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0)
   // Purchase fees excludes SDLT (shown separately)
-  const otherFees = af + sc + assumptions.defLegal + extraPFTotal
+  const legalFees = prop.purchaseFees?.legalFees ?? assumptions.defLegal
+  const otherFees = af + sc + legalFees + extraPFTotal
   const totalFees = sdlt.total + otherFees
 
   const renoBase = Object.entries(prop.renovation || {})
@@ -109,7 +111,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const sensCells = [-0.10, -0.05, 0, 0.05, 0.10].map(d => {
     const o2 = prop.offerPrice * (1 + d)
     const s2 = calcSDLT(o2, assumptions.sdltType)
-    const f2 = s2.total + Math.round(o2 * assumptions.defAF / 100) + Math.round(o2 * scPct / 100) + assumptions.defLegal + extraPFTotal
+    const f2 = s2.total + Math.round(o2 * auctionFeePct / 100) + Math.round(o2 * scPct / 100) + legalFees + extraPFTotal
     const profit = prop.resaleEst - (o2 + f2 + renoTotal + lease.total + fin.total)
     return { profit: Math.round(profit) }
   })
@@ -449,7 +451,19 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
             {/* ── PURCHASE FEES (excl. SDLT) ── */}
             <Collapsible title="Purchase fees">
               <CalcTable rows={[
-                row(`Auction fee (${assumptions.defAF}%)`, <Val>{gbp(af)}</Val>, true),
+                {
+                  label: <span style={{color:'var(--ink2)',display:'flex',alignItems:'center',gap:4}}>
+                    Auction fee
+                    <input
+                      type="number"
+                      value={prop.purchaseFees?.auctionFeePct ?? assumptions.defAF}
+                      onChange={e=>up({purchaseFees:{...prop.purchaseFees,auctionFeePct:+e.target.value}})}
+                      style={{width:36,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:3,padding:'2px 4px',fontSize:11,textAlign:'right',fontFamily:"'DM Sans',sans-serif",outline:'none'}}
+                    />
+                    <span style={{fontSize:11,color:'var(--ink3)'}}>%</span>
+                  </span>,
+                  value: <Val>{gbp(af)}</Val>
+                },
                 row(
                   <span style={{display:'flex',alignItems:'center',gap:4,fontSize:13}}>
                     Special conditions
@@ -465,7 +479,13 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
                   <Val>{gbp(sc)}</Val>,
                   true
                 ),
-                row('Legal fees', <Val>{gbp(assumptions.defLegal)}</Val>, true),
+                {
+                  label: <span style={{color:'var(--ink2)'}}>Legal fees</span>,
+                  value: <TInput
+                    value={prop.purchaseFees?.legalFees ?? assumptions.defLegal}
+                    onChange={v=>up({purchaseFees:{...prop.purchaseFees,legalFees:v}})}
+                  />
+                },
                 ...extraPFRows.map(r => row(
                   <input value={r.label} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}} />,
                   <TInput value={r.value} onChange={v=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,value:String(v)}:x))} />
@@ -507,7 +527,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
               <CalcTable rows={[
                 row('Cost of extending', <TInput value={prop.leaseExtension?.cost||''} onChange={v=>up({leaseExtension:{...prop.leaseExtension,cost:v}})} />),
                 row('SDLT on extension (5%)', <Val>{gbp(lease.sdlt)}</Val>, true),
-                row('Legal fees', <TInput value={prop.leaseExtension?.legal||''} onChange={v=>up({leaseExtension:{...prop.leaseExtension,legal:v}})} placeholder="0" />),
+                row('Legal fees', <TInput value={prop.leaseExtension?.legal !== undefined ? prop.leaseExtension.legal : ''} onChange={v=>up({leaseExtension:{...prop.leaseExtension,legal:v}})} placeholder="0" />),
                 totalRow('Total', <Val>{gbp(lease.total)}</Val>),
               ]} />
             </Collapsible>

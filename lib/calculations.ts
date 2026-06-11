@@ -8,18 +8,23 @@ interface SDLTBand {
 }
 
 const SDLT_BANDS: Record<Assumptions['sdltType'], SDLTBand[]> = {
+  // Additional dwelling surcharge: standard rate + 5% on every band
   additional: [
-    { ceiling: 250_000,   rate: 0.03 },
-    { ceiling: 925_000,   rate: 0.08 },
-    { ceiling: 1_500_000, rate: 0.13 },
-    { ceiling: Infinity,  rate: 0.15 },
+    { ceiling: 125_000,   rate: 0.05 },
+    { ceiling: 250_000,   rate: 0.07 },
+    { ceiling: 925_000,   rate: 0.10 },
+    { ceiling: 1_500_000, rate: 0.15 },
+    { ceiling: Infinity,  rate: 0.17 },
   ],
+  // Standard residential
   standard: [
-    { ceiling: 250_000,   rate: 0.00 },
+    { ceiling: 125_000,   rate: 0.00 },
+    { ceiling: 250_000,   rate: 0.02 },
     { ceiling: 925_000,   rate: 0.05 },
     { ceiling: 1_500_000, rate: 0.10 },
     { ceiling: Infinity,  rate: 0.12 },
   ],
+  // First-time buyer relief
   ftb: [
     { ceiling: 425_000,   rate: 0.00 },
     { ceiling: 625_000,   rate: 0.05 },
