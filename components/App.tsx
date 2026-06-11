@@ -36,7 +36,6 @@ export function App() {
   const properties = useStore(s => s.properties)
   const pastSales = useStore(s => s.pastSales)
 
-  // Global search results
   const gsResults = gsQuery.trim().length > 0 ? [
     ...properties.filter(p => !p.archived && (p.address + ' ' + p.postcode + ' ' + (p.tags||'')).toLowerCase().includes(gsQuery.toLowerCase()))
       .map(p => ({ icon: 'ti-building', addr: p.address, meta: p.postcode, screen: 'Property', action: () => { setDetailId(p.id); setGsOpen(false) } })),
@@ -46,9 +45,8 @@ export function App() {
       .map(s => ({ icon: 'ti-receipt', addr: s.address, meta: s.postcode, screen: 'Past Sale', action: () => { setScreen('pastsales'); setGsOpen(false) } })),
   ] : []
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxWidth: 600, margin: '0 auto', overflow: 'hidden', position: 'relative' }}>
-
+  const shell = (
+    <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', background: 'var(--cream)', position: 'relative' }}>
       {/* Top bar */}
       <div style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)', padding: '12px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, paddingTop: 'max(12px,env(safe-area-inset-top,12px))' }}>
         <span style={{ fontFamily: "'DM Serif Display',serif", fontSize: 21, letterSpacing: '-0.01em' }}>{TITLES[screen]}</span>
@@ -62,21 +60,15 @@ export function App() {
 
       {/* Screens */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 16px 90px', display: screen === 'properties' ? 'block' : 'none' }}>
-          <PropertiesScreen onOpenProperty={setDetailId} />
-        </div>
-        <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 16px 90px', display: screen === 'history' ? 'block' : 'none' }}>
-          <HistoryScreen onOpenProperty={setDetailId} />
-        </div>
-        <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 16px 90px', display: screen === 'pastsales' ? 'block' : 'none' }}>
-          <PastSalesScreen />
-        </div>
-        <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 16px 90px', display: screen === 'compare' ? 'block' : 'none' }}>
-          <CompareScreen />
-        </div>
-        <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 16px 90px', display: screen === 'assumptions' ? 'block' : 'none' }}>
-          <AssumptionsScreen />
-        </div>
+        {(['properties','history','pastsales','compare','assumptions'] as Screen[]).map(s => (
+          <div key={s} style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '12px 16px 90px', display: screen === s ? 'block' : 'none' }}>
+            {s === 'properties'  && <PropertiesScreen onOpenProperty={setDetailId} />}
+            {s === 'history'     && <HistoryScreen onOpenProperty={setDetailId} />}
+            {s === 'pastsales'   && <PastSalesScreen />}
+            {s === 'compare'     && <CompareScreen />}
+            {s === 'assumptions' && <AssumptionsScreen />}
+          </div>
+        ))}
       </div>
 
       {/* Bottom nav */}
@@ -92,12 +84,9 @@ export function App() {
         ))}
       </nav>
 
-      {/* Property detail overlay */}
-      {detailId && <PropertyDetail propertyId={detailId} onClose={() => setDetailId(null)} />}
-
       {/* Global search overlay */}
       {gsOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'var(--cream)', zIndex: 300, display: 'flex', flexDirection: 'column', maxWidth: 430, left: '50%', transform: 'translateX(-50%)' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--cream)', zIndex: 300, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 'max(10px,env(safe-area-inset-top,10px))' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 11px', flex: 1 }}>
               <i className="ti ti-search" style={{ color: 'var(--ink3)', fontSize: 16 }} />
@@ -121,6 +110,21 @@ export function App() {
             ))}
           </div>
         </div>
+      )}
+    </div>
+  )
+
+  // On desktop: show shell + detail panel side by side
+  // On mobile: shell full screen, detail as fixed overlay
+  return (
+    <div id="app-root">
+      {shell}
+      {detailId && (
+        <PropertyDetail
+          propertyId={detailId}
+          onClose={() => setDetailId(null)}
+          asPanel={true}
+        />
       )}
     </div>
   )

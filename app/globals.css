@@ -19,15 +19,11 @@
   --red-bg: #F4E8E8;
   --amber: #7A5C00;
   --amber-bg: #FFF8E1;
+  --blue: #1A4A7A;
+  --blue-bg: #E8F0F8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-}
-
-html, body { height: 100%; overflow: hidden; background: var(--cream); }
-body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
-
-/* Reference style aliases — maps external variable names to our palette */
-:root {
+  /* Reference style aliases */
   --bd: var(--border);
   --sf: #ffffff;
   --sf2: var(--cream2);
@@ -36,21 +32,60 @@ body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
   --a: var(--accent);
 }
 
-/* Hide number input spinners globally */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
-input[type=number] { -moz-appearance: textfield; appearance: textfield }
-
-/* Remove tap highlight on interactive elements */
-button, a, [role=button] { -webkit-tap-highlight-color: transparent }
+html, body { height: 100%; overflow: hidden; background: var(--cream); }
+body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
 
 /* Hide number input spinners globally */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
 input[type=number] { -moz-appearance: textfield }
 
-/* Ensure full viewport width usage */
-.app-shell { width: 100%; max-width: 430px; margin: 0 auto }
-
 /* Date input styling */
 input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; font-size: 11px }
+
+/* ── Desktop layout ── */
+@media (min-width: 768px) {
+  body { overflow: auto; background: var(--cream2); }
+  html, body { height: 100%; }
+
+  /* Centre the app shell as a phone-like card on desktop */
+  #app-root {
+    display: flex;
+    min-height: 100vh;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px;
+    gap: 24px;
+  }
+
+  .app-shell {
+    width: 430px;
+    flex-shrink: 0;
+    height: calc(100vh - 48px);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    position: sticky;
+    top: 24px;
+  }
+
+  /* Detail screen fills the right panel on desktop */
+  .detail-panel {
+    flex: 1;
+    max-width: 600px;
+    height: calc(100vh - 48px);
+    background: var(--cream);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 767px) {
+  #app-root { height: 100dvh; overflow: hidden; }
+  .app-shell { height: 100dvh; }
+}

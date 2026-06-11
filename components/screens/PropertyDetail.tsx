@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import { gbp, pct } from '@/lib/format'
+import { gbp, pct, ppsf, ppsm } from '@/lib/format'
 import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenovation, calcYield } from '@/lib/calculations'
 import { Sheet } from '@/components/ui/Sheet'
 import { Btn } from '@/components/ui/Btn'
@@ -12,7 +12,7 @@ import { ComparablesMapDynamic } from '@/components/map/ComparablesMapDynamic'
 import type { Property, Comparable, PastSale } from '@/types'
 import { uid } from '@/types'
 
-interface Props { propertyId: string; onClose: () => void }
+interface Props { propertyId: string; onClose: () => void; asPanel?: boolean }
 
 // Compact inline input for calc tables — no background, just a plain number field
 function TInput({ value, onChange, placeholder }: { value: string|number; onChange: (v: number) => void; placeholder?: string }) {
@@ -34,7 +34,7 @@ function Val({ children, colour }: { children: React.ReactNode; colour?: string 
 
 const SQM_PER_SQFT = 0.092903
 
-export function PropertyDetail({ propertyId, onClose }: Props) {
+export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const { properties, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
   const p = properties.find(x => x.id === propertyId)
 
@@ -56,6 +56,11 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
   const [renoVat, setRenoVat] = useState(false)
   // Track whether loan has been manually overridden
   const [loanOverride, setLoanOverride] = useState(false)
+
+  // Collect previously used tags for autocomplete
+  const allUsedTags = Array.from(new Set(
+    properties.flatMap(pr => (pr.tags||'').split(',').map((t: string) => t.trim()).filter((t: string) => t && t.toLowerCase() !== 'auction' && t.toLowerCase() !== 'leasehold'))
+  ))
 
   if (!p) return null
   const prop = p as Property
@@ -283,24 +288,9 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                   <span key={t} style={{ display:'inline-flex', alignItems:'center', borderRadius:99, padding:'3px 10px', fontSize:11, background:'var(--cream2)', border:'1px solid var(--border)', color:'var(--ink2)' }}>{t}</span>
                 ))}
               </div>
-              <div style={{ display:'flex', gap:6, marginTop:4 }}>
-                <div style={{ flex:1, display:'flex', alignItems:'center', gap:6, background:'var(--cream)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px' }}>
-                  <i className="ti ti-link" style={{ fontSize:11, color:'var(--ink3)', flexShrink:0 }} />
-                  <input value={prop.url||''} onChange={e=>up({url:e.target.value})} placeholder="Listing URL" style={{ flex:1, fontSize:11, background:'none', border:'none', outline:'none', fontFamily:"'DM Sans',sans-serif", color:'var(--ink)', minWidth:0 }} />
-                </div>
-                <div style={{ flex:1, display:'flex', alignItems:'center', gap:6, background:'var(--cream)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px' }}>
-                  <i className="ti ti-tag" style={{ fontSize:11, color:'var(--ink3)', flexShrink:0 }} />
-                  <input
-                    value={(prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold').join(', ')}
-                    onChange={e=>{
-                      const base = (prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t.toLowerCase()==='auction'||t.toLowerCase()==='leasehold')
-                      const extra = e.target.value.split(',').map((t: string)=>t.trim()).filter(Boolean)
-                      up({tags:[...base,...extra].join(', ')})
-                    }}
-                    placeholder="Tags…"
-                    style={{ flex:1, fontSize:11, background:'none', border:'none', outline:'none', fontFamily:"'DM Sans',sans-serif", color:'var(--ink)', minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}
-                  />
-                </div>
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4, background:'var(--cream)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px' }}>
+                <i className="ti ti-link" style={{ fontSize:11, color:'var(--ink3)', flexShrink:0 }} />
+                <input value={prop.url||''} onChange={e=>up({url:e.target.value})} placeholder="Listing URL" style={{ flex:1, fontSize:11, background:'none', border:'none', outline:'none', fontFamily:"'DM Sans',sans-serif", color:'var(--ink)', minWidth:0 }} />
               </div>
             </div>
 
@@ -317,14 +307,14 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                 <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Sq ft</div>
                 <input type="number" value={prop.sqft||''} onChange={e=>onSqftChange(+e.target.value)} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
                 <div style={{ fontSize:10, marginTop:3, color: prop.sqft && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
-                  {prop.sqft && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqft)}/ft` : '—'}
+                  {prop.sqft && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqft).toLocaleString('en-GB')}/sqft` : '—'}
                 </div>
               </div>
               <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
                 <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Sq m</div>
                 <input type="number" value={prop.sqm||''} onChange={e=>onSqmChange(+e.target.value)} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
                 <div style={{ fontSize:10, marginTop:3, color: prop.sqm && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
-                  {prop.sqm && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqm)}/m` : '—'}
+                  {prop.sqm && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqm).toLocaleString('en-GB')}/sqm` : '—'}
                 </div>
               </div>
               <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
@@ -338,7 +328,12 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
               </div>
             </div>
 
-            {sL('Price history')}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'22px 0 12px',paddingBottom:8,borderBottom:'1px solid var(--border)'}}>
+              <span style={{fontSize:10,fontWeight:700,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.07em'}}>Price history</span>
+              <button onClick={() => setAddPhOpen(true)} style={{fontSize:11,padding:'4px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
+                <i className="ti ti-plus" style={{fontSize:10}} /> Add
+              </button>
+            </div>
             {card(
               !prop.priceHistory?.length
                 ? <div style={{fontSize:12,color:'var(--ink3)',textAlign:'center',padding:6}}>No history yet</div>
@@ -355,32 +350,55 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                   }),
               { padding: '2px 12px' }
             )}
-            <button onClick={() => setAddPhOpen(true)} style={{width:'100%',marginBottom:12,fontSize:13,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'10px 14px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-              <i className="ti ti-plus" style={{fontSize:12}} /> Add price point
-            </button>
+
 
             {sL('Offer considerations')}
             {card(<>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-                <label style={{fontSize:13,color:'var(--ink2)'}}>Offer price</label>
-                <TInput value={prop.offerPrice||''} onChange={v=>up({offerPrice:v})} />
-              </div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                <label style={{fontSize:13,color:'var(--ink2)'}}>Potential resale price</label>
-                <TInput value={prop.resaleEst||''} onChange={v=>up({resaleEst:v})} />
-              </div>
               <CalcTable rows={[
-                row('Offer price', <Val>{gbp(prop.offerPrice)}</Val>, true),
+                {
+                  label: <span style={{color:'var(--ink2)'}}>Offer price</span>,
+                  value: <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}>
+                    {prop.sqft ? <span style={{fontSize:10,color:'var(--ink3)'}}>{ppsf(prop.offerPrice,prop.sqft)}</span> : null}
+                    <TInput value={prop.offerPrice||''} onChange={v=>up({offerPrice:v})} />
+                  </span>
+                },
                 row('Stamp duty (SDLT)', <Val>{gbp(sdlt.total)}</Val>, true),
                 row('Other purchase fees', <Val>{gbp(otherFees)}</Val>, true),
                 row('Renovation cost', <Val>{gbp(renoTotal)}</Val>, true),
-                subtotalRow('Sub-total', gbp(sub)),
+                {
+                  label: <span style={{fontWeight:600}}>Sub-total</span>,
+                  value: <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}>
+                    {prop.sqft ? <span style={{fontSize:10,color:'var(--ink3)'}}>{ppsf(sub,prop.sqft)}</span> : null}
+                    <Val>{gbp(sub)}</Val>
+                  </span>,
+                  type: 'subtotal' as const
+                },
                 row('Lease extension', <Val>{gbp(lease.total)}</Val>, true),
-                subtotalRow('Total cost', gbp(totalCost)),
+                {
+                  label: <span style={{fontWeight:600}}>Total cost</span>,
+                  value: <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}>
+                    {prop.sqft ? <span style={{fontSize:10,color:'var(--ink3)'}}>{ppsf(totalCost,prop.sqft)}</span> : null}
+                    <Val>{gbp(totalCost)}</Val>
+                  </span>,
+                  type: 'subtotal' as const
+                },
                 row('Financing costs', <Val>{gbp(fin.total)}</Val>, true),
-                subtotalRow('Cost after finance', gbp(caf)),
-                row('Potential resale', <Val>{gbp(prop.resaleEst)}</Val>, true),
-                row('Profit before finance', <Val>{gbp(pbf)}</Val>, true),
+                {
+                  label: <span style={{fontWeight:600}}>Cost after finance</span>,
+                  value: <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}>
+                    {prop.sqft ? <span style={{fontSize:10,color:'var(--ink3)'}}>{ppsf(caf,prop.sqft)}</span> : null}
+                    <Val>{gbp(caf)}</Val>
+                  </span>,
+                  type: 'subtotal' as const
+                },
+                {
+                  label: <span style={{color:'var(--ink2)',fontWeight:700}}>Potential resale</span>,
+                  value: <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}}>
+                    {prop.sqft ? <span style={{fontSize:10,color:'var(--ink3)'}}>{ppsf(prop.resaleEst,prop.sqft)}</span> : null}
+                    <TInput value={prop.resaleEst||''} onChange={v=>up({resaleEst:v})} />
+                  </span>
+                },
+                row('Profit before finance', <Val colour={pbf>=0?'var(--green)':'var(--red)'}>{gbp(pbf)}</Val>, true),
                 totalRow('Profit after finance', <Val colour={paf>=0?'var(--green)':'var(--red)'}>{gbp(paf)}</Val>),
               ]} />
             </>)}
@@ -518,6 +536,52 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                 totalRow('Financing cost', <Val>{gbp(fin.total)}</Val>),
               ]} />
             </Collapsible>
+
+            {sL('Tags')}
+            <div style={{background:'#fff',border:'1px solid var(--border)',borderRadius:14,padding:'10px 12px',marginBottom:12}}>
+              <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:6}}>
+                {(prop.tags||'').split(',').map((t:string)=>t.trim()).filter((t:string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold').map((t:string)=>(
+                  <span key={t} onClick={()=>{
+                    const base=(prop.tags||'').split(',').map((x:string)=>x.trim()).filter((x:string)=>x.toLowerCase()==='auction'||x.toLowerCase()==='leasehold')
+                    const rest=(prop.tags||'').split(',').map((x:string)=>x.trim()).filter((x:string)=>x && x.toLowerCase()!=='auction' && x.toLowerCase()!=='leasehold' && x!==t)
+                    up({tags:[...base,...rest].join(', ')})
+                  }} style={{display:'inline-flex',alignItems:'center',gap:3,background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:99,padding:'2px 8px',fontSize:11,color:'var(--ink2)',cursor:'pointer'}}>
+                    {t} <span style={{fontSize:12,color:'var(--ink3)'}}>×</span>
+                  </span>
+                ))}
+              </div>
+              <input
+                placeholder="Add tag and press Enter…"
+                style={{width:'100%',fontSize:12,background:'none',border:'none',outline:'none',fontFamily:"'DM Sans',sans-serif",color:'var(--ink)'}}
+                onKeyDown={e=>{
+                  if(e.key==='Enter' || e.key===','){
+                    e.preventDefault()
+                    const val=(e.target as HTMLInputElement).value.trim().replace(/,$/,'')
+                    if(!val)return
+                    const base=(prop.tags||'').split(',').map((t:string)=>t.trim()).filter((t:string)=>t.toLowerCase()==='auction'||t.toLowerCase()==='leasehold')
+                    const rest=(prop.tags||'').split(',').map((t:string)=>t.trim()).filter((t:string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold')
+                    if(!rest.includes(val)){up({tags:[...base,...rest,val].join(', ')})}
+                    ;(e.target as HTMLInputElement).value=''
+                  }
+                }}
+                list="tag-suggestions"
+              />
+              <datalist id="tag-suggestions">
+                {allUsedTags.map((t:string)=><option key={t} value={t}/>)}
+              </datalist>
+              {allUsedTags.length>0 && <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:8,borderTop:'1px solid var(--cream2)',paddingTop:8}}>
+                <span style={{fontSize:10,color:'var(--ink3)',marginRight:2}}>Recent:</span>
+                {allUsedTags.slice(0,8).map((t:string)=>{
+                  const already=(prop.tags||'').split(',').map((x:string)=>x.trim()).includes(t)
+                  if(already)return null
+                  return <span key={t} onClick={()=>{
+                    const base=(prop.tags||'').split(',').map((x:string)=>x.trim()).filter((x:string)=>x.toLowerCase()==='auction'||x.toLowerCase()==='leasehold')
+                    const rest=(prop.tags||'').split(',').map((x:string)=>x.trim()).filter((x:string)=>x && x.toLowerCase()!=='auction' && x.toLowerCase()!=='leasehold')
+                    up({tags:[...base,...rest,t].join(', ')})
+                  }} style={{display:'inline-flex',alignItems:'center',background:'var(--cream)',border:'1px solid var(--border)',borderRadius:99,padding:'2px 8px',fontSize:11,color:'var(--ink3)',cursor:'pointer'}}>+ {t}</span>
+                })}
+              </div>}
+            </div>
 
             {sL('Notes')}
             <Textarea value={prop.notes||''} onChange={e=>up({notes:e.target.value})} placeholder="Add notes about this property…" style={{minHeight:100,marginBottom:16}} />
