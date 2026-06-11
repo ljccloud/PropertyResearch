@@ -35,3 +35,22 @@ body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
   --t3: var(--ink3);
   --a: var(--accent);
 }
+
+/* Hide number input spinners globally */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+input[type=number] { -moz-appearance: textfield; appearance: textfield }
+
+/* Remove tap highlight on interactive elements */
+button, a, [role=button] { -webkit-tap-highlight-color: transparent }
+
+/* Hide number input spinners globally */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+input[type=number] { -moz-appearance: textfield }
+
+/* Ensure full viewport width usage */
+.app-shell { width: 100%; max-width: 430px; margin: 0 auto }
+
+/* Date input styling */
+input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; font-size: 11px }

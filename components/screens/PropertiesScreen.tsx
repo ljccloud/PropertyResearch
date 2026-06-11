@@ -26,7 +26,7 @@ export function PropertiesScreen({ onOpenProperty }: Props) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [form, setForm] = useState({ address: '', postcode: '', listPrice: '', sqft: '', beds: '', url: '', tags: '' })
+  const [form, setForm] = useState({ address: '', postcode: '', listPrice: '', sqft: '', sqm: '', beds: '', baths: '', url: '', tags: '' })
 
   const filtered = properties
     .filter(p => {
@@ -48,6 +48,18 @@ export function PropertiesScreen({ onOpenProperty }: Props) {
       return 0
     })
 
+  const SQM_PER_SQFT = 0.092903
+  function onQASqftChange(val: string) {
+    const n = parseFloat(val) || 0
+    const sqm = n ? String(Math.round(n * SQM_PER_SQFT * 100) / 100) : ''
+    setForm(s => ({ ...s, sqft: val, sqm }))
+  }
+  function onQASqmChange(val: string) {
+    const n = parseFloat(val) || 0
+    const sqft = n ? String(Math.round(n / SQM_PER_SQFT)) : ''
+    setForm(s => ({ ...s, sqm: val, sqft }))
+  }
+
   function handleAdd() {
     if (!form.address.trim()) return
     const p = newProperty()
@@ -55,12 +67,15 @@ export function PropertiesScreen({ onOpenProperty }: Props) {
     p.postcode = form.postcode.trim()
     p.listPrice = parseFloat(form.listPrice) || 0
     p.sqft = parseFloat(form.sqft) || 0
+    p.sqm = parseFloat(form.sqm) || 0
+    p.sqm = parseFloat(form.sqm) || 0
     p.beds = parseFloat(form.beds) || 0
+    p.baths = parseFloat(form.baths) || 0
     p.url = form.url.trim()
     p.tags = form.tags.trim()
     addProperty(p)
     setSheetOpen(false)
-    setForm({ address: '', postcode: '', listPrice: '', sqft: '', beds: '', url: '', tags: '' })
+    setForm({ address: '', postcode: '', listPrice: '', sqft: '', sqm: '', beds: '', baths: '', url: '', tags: '' })
     onOpenProperty(p.id)
   }
 
@@ -102,8 +117,24 @@ export function PropertiesScreen({ onOpenProperty }: Props) {
           <FormRow label="Listing price"><Input type="number" value={form.listPrice} onChange={e => setForm(s => ({ ...s, listPrice: e.target.value }))} placeholder="450000" /></FormRow>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
-          <FormRow label="Sq ft"><Input type="number" value={form.sqft} onChange={e => setForm(s => ({ ...s, sqft: e.target.value }))} /></FormRow>
+          <FormRow label="Sq ft">
+            <Input type="number" value={form.sqft} onChange={e => {
+              const sqft = e.target.value
+              const sqm = sqft ? String(Math.round(parseFloat(sqft) * 0.092903 * 100) / 100) : ''
+              setForm(s => ({ ...s, sqft, sqm }))
+            }} />
+          </FormRow>
+          <FormRow label="Sq m">
+            <Input type="number" value={form.sqm || ''} onChange={e => {
+              const sqm = e.target.value
+              const sqft = sqm ? String(Math.round(parseFloat(sqm) / 0.092903)) : ''
+              setForm(s => ({ ...s, sqm, sqft }))
+            }} />
+          </FormRow>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
           <FormRow label="Beds"><Input type="number" value={form.beds} onChange={e => setForm(s => ({ ...s, beds: e.target.value }))} /></FormRow>
+          <FormRow label="Baths"><Input type="number" value={form.baths || ''} onChange={e => setForm(s => ({ ...s, baths: e.target.value }))} /></FormRow>
         </div>
         <FormRow label="Listing URL"><Input value={form.url} onChange={e => setForm(s => ({ ...s, url: e.target.value }))} placeholder="https://rightmove.co.uk/…" /></FormRow>
         <FormRow label="Tags"><Input value={form.tags} onChange={e => setForm(s => ({ ...s, tags: e.target.value }))} placeholder="Leasehold, Needs work…" /></FormRow>

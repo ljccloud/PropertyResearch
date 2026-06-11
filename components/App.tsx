@@ -47,7 +47,7 @@ export function App() {
   ] : []
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxWidth: 430, margin: '0 auto', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxWidth: 600, margin: '0 auto', overflow: 'hidden', position: 'relative' }}>
 
       {/* Top bar */}
       <div style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)', padding: '12px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, paddingTop: 'max(12px,env(safe-area-inset-top,12px))' }}>

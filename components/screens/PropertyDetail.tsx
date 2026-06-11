@@ -191,7 +191,7 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--cream)', zIndex: 150, display: 'flex', flexDirection: 'column', maxWidth: 430, left: '50%', transform: 'translateX(-50%)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--cream)', zIndex: 150, display: 'flex', flexDirection: 'column', maxWidth: 600, left: '50%', transform: 'translateX(-50%)' }}>
 
       {/* ── Top bar ── */}
       <div style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 'max(10px,env(safe-area-inset-top,10px))' }}>
@@ -283,49 +283,58 @@ export function PropertyDetail({ propertyId, onClose }: Props) {
                   <span key={t} style={{ display:'inline-flex', alignItems:'center', borderRadius:99, padding:'3px 10px', fontSize:11, background:'var(--cream2)', border:'1px solid var(--border)', color:'var(--ink2)' }}>{t}</span>
                 ))}
               </div>
-              <FormRow label="Listing URL"><Input value={prop.url||''} onChange={e=>up({url:e.target.value})} placeholder="https://rightmove.co.uk/..." /></FormRow>
-              <FormRow label="Other tags"><Input
-                value={(prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold').join(', ')}
-                onChange={e=>{
-                  const base = (prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t.toLowerCase()==='auction'||t.toLowerCase()==='leasehold')
-                  const extra = e.target.value.split(',').map((t: string)=>t.trim()).filter(Boolean)
-                  up({tags:[...base,...extra].join(', ')})
-                }}
-                placeholder="Needs work, Chain free..."
-              /></FormRow>
+              <div style={{ display:'flex', gap:6, marginTop:4 }}>
+                <div style={{ flex:1, display:'flex', alignItems:'center', gap:6, background:'var(--cream)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px' }}>
+                  <i className="ti ti-link" style={{ fontSize:11, color:'var(--ink3)', flexShrink:0 }} />
+                  <input value={prop.url||''} onChange={e=>up({url:e.target.value})} placeholder="Listing URL" style={{ flex:1, fontSize:11, background:'none', border:'none', outline:'none', fontFamily:"'DM Sans',sans-serif", color:'var(--ink)', minWidth:0 }} />
+                </div>
+                <div style={{ flex:1, display:'flex', alignItems:'center', gap:6, background:'var(--cream)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px' }}>
+                  <i className="ti ti-tag" style={{ fontSize:11, color:'var(--ink3)', flexShrink:0 }} />
+                  <input
+                    value={(prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t && t.toLowerCase()!=='auction' && t.toLowerCase()!=='leasehold').join(', ')}
+                    onChange={e=>{
+                      const base = (prop.tags||'').split(',').map((t: string)=>t.trim()).filter((t: string)=>t.toLowerCase()==='auction'||t.toLowerCase()==='leasehold')
+                      const extra = e.target.value.split(',').map((t: string)=>t.trim()).filter(Boolean)
+                      up({tags:[...base,...extra].join(', ')})
+                    }}
+                    placeholder="Tags…"
+                    style={{ flex:1, fontSize:11, background:'none', border:'none', outline:'none', fontFamily:"'DM Sans',sans-serif", color:'var(--ink)', minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* FOUR METRIC TILES */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
-              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>List price</div>
-                <input type="number" value={prop.listPrice||''} onChange={e=>up({listPrice:+e.target.value})} placeholder="0" style={{ width:'100%', fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
-                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>
-                  <input type="date" value={prop.dateListed||''} onChange={e=>up({dateListed:e.target.value})} style={{ background:'none', border:'none', outline:'none', fontSize:11, color:'var(--ink3)', fontFamily:"'DM Sans',sans-serif", padding:0, width:'100%' }} />
+            {/* FOUR METRIC TILES — single row, equal width */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, marginBottom:12, margin:'0 0 12px 0' }}>
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
+                <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Price</div>
+                <input type="number" value={prop.listPrice||''} onChange={e=>up({listPrice:+e.target.value})} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
+                <div style={{ fontSize:10, color:'var(--ink3)', marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  <input type="date" value={prop.dateListed||''} onChange={e=>up({dateListed:e.target.value})} style={{ background:'none', border:'none', outline:'none', fontSize:10, color:'var(--ink3)', fontFamily:"'DM Sans',sans-serif", padding:0, width:'100%' }} />
                 </div>
               </div>
-              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>Sq ft</div>
-                <input type="number" value={prop.sqft||''} onChange={e=>onSqftChange(+e.target.value)} placeholder="0" style={{ width:'100%', fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
-                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>
-                  {prop.sqft && prop.listPrice ? <span style={{color:'var(--accent)'}}>{`${Math.round(prop.listPrice/prop.sqft)}/sqft`}</span> : <span style={{opacity:0.35}}>--/sqft</span>}
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
+                <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Sq ft</div>
+                <input type="number" value={prop.sqft||''} onChange={e=>onSqftChange(+e.target.value)} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
+                <div style={{ fontSize:10, marginTop:3, color: prop.sqft && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
+                  {prop.sqft && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqft)}/ft` : '—'}
                 </div>
               </div>
-              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>Sq m</div>
-                <input type="number" value={prop.sqm||''} onChange={e=>onSqmChange(+e.target.value)} placeholder="0" style={{ width:'100%', fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
-                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>
-                  {prop.sqm && prop.listPrice ? <span style={{color:'var(--accent)'}}>{`${Math.round(prop.listPrice/prop.sqm)}/sqm`}</span> : <span style={{opacity:0.35}}>--/sqm</span>}
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
+                <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Sq m</div>
+                <input type="number" value={prop.sqm||''} onChange={e=>onSqmChange(+e.target.value)} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
+                <div style={{ fontSize:10, marginTop:3, color: prop.sqm && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
+                  {prop.sqm && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqm)}/m` : '—'}
                 </div>
               </div>
-              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'13px 14px' }}>
-                <div style={{ fontSize:10, fontWeight:600, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:5 }}>Beds / Baths</div>
-                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <input type="number" value={prop.beds||''} onChange={e=>up({beds:+e.target.value})} placeholder="0" style={{ width:40, fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
-                  <span style={{ fontSize:15, color:'var(--ink3)', fontWeight:300 }}>/</span>
-                  <input type="number" value={prop.baths||''} onChange={e=>up({baths:+e.target.value})} placeholder="0" style={{ width:40, fontSize:17, fontWeight:600, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif" }} />
+              <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
+                <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Bed/Bath</div>
+                <div style={{ display:'flex', alignItems:'center', gap:2 }}>
+                  <input type="number" value={prop.beds||''} onChange={e=>up({beds:+e.target.value})} placeholder="—" style={{ width:28, fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
+                  <span style={{ fontSize:13, color:'var(--ink3)' }}>/</span>
+                  <input type="number" value={prop.baths||''} onChange={e=>up({baths:+e.target.value})} placeholder="—" style={{ width:28, fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
                 </div>
-                <div style={{ fontSize:10, fontWeight:500, color:'var(--ink3)', marginTop:3 }}>bed / bath</div>
+                <div style={{ fontSize:10, fontWeight:500, color:'var(--ink3)', marginTop:3 }}>bed/bath</div>
               </div>
             </div>
 

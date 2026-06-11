@@ -129,7 +129,7 @@ const s: Record<string, React.CSSProperties> = {
   hint: { marginTop: 44, fontSize: 13, color: '#9A9690' },
   card: {
     background: '#fff', border: '1px solid #D8D4CA', borderRadius: 12,
-    padding: '28px 24px', maxWidth: 360, width: '100%', textAlign: 'center',
+    padding: '28px 24px', maxWidth: 420, width: '100%', textAlign: 'center',
   },
   heading: {
     fontFamily: "'DM Serif Display', serif", fontSize: 22,
