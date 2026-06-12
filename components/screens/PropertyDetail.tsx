@@ -42,7 +42,7 @@ function fmtDate(d: string): string {
 }
 
 export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
-  const { properties, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
+  const { properties, pastSales, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
   const p = properties.find(x => x.id === propertyId)
 
   const [tab, setTab] = useState<'overview'|'comparables'|'resale'>('overview')
@@ -58,6 +58,11 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const [compType, setCompType] = useState<'forsale'|'sold'|'auction'>('sold')
   const [compForm, setCompForm] = useState({ address: '', postcode: '', price: '', date: '', sqft: '' })
   const [compDateFilter, setCompDateFilter] = useState<'all'|'12'|'24'>('all')
+  const [importPSOpen, setImportPSOpen] = useState(false)
+  const [importPSType, setImportPSType] = useState<'forsale'|'sold'|'auction'>('sold')
+  const [archiveSaleOpen, setArchiveSaleOpen] = useState(false)
+  const [pendingArchiveOutcome, setPendingArchiveOutcome] = useState<'Purchased'|'Passed'|'Outbid'>('Purchased')
+  const [pendingArchiveReason, setPendingArchiveReason] = useState('')
   const [extraRenoRows, setExtraRenoRows] = useState<{id:string;label:string;value:string}[]>([])
   const [extraPFRows, setExtraPFRows] = useState<{id:string;label:string;value:string}[]>([])
   const [renoVat, setRenoVat] = useState(false)
@@ -220,7 +225,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
             {ovfOpen && (
               <div style={{ position:'absolute',top:38,right:0,background:'#fff',border:'1px solid var(--border)',borderRadius:10,zIndex:10,minWidth:140,overflow:'hidden',boxShadow:'0 4px 16px rgba(0,0,0,.08)' }}>
                 <div onClick={() => { setOvfOpen(false); duplicateProperty(propertyId); onClose() }} style={{ padding:'11px 14px',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8 }}><i className="ti ti-copy" />Duplicate</div>
-                <div onClick={() => { setOvfOpen(false); setArchiveOpen(true) }} style={{ padding:'11px 14px',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'var(--red)' }}><i className="ti ti-archive" />Archive</div>
+                <div onClick={() => { setOvfOpen(false); setPendingArchiveOutcome('Purchased'); setPendingArchiveReason(''); setArchiveSaleOpen(true) }} style={{ padding:'11px 14px',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'var(--red)' }}><i className="ti ti-archive" />Archive</div>
               </div>
             )}
           </div>
@@ -343,21 +348,35 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
               <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
                 <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Price</div>
                 <input type="number" value={prop.listPrice||''} onChange={e=>up({listPrice:+e.target.value})} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
-                <div style={{ fontSize:10, color:'var(--ink3)', marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                  <input type="date" value={prop.dateListed||''} onChange={e=>up({dateListed:e.target.value})} style={{ background:'none', border:'none', outline:'none', fontSize:10, color:'var(--ink3)', fontFamily:"'DM Sans',sans-serif", padding:0, width:'100%' }} />
+                <div style={{ fontSize:10, color:'var(--ink3)', marginTop:3 }}>
+                  {prop.listPrice ? gbp(prop.listPrice) : ''}
+                </div>
+                <div style={{ fontSize:10, color:'var(--ink3)', marginTop:2 }}>
+                  <input
+                    type="month"
+                    value={prop.dateListed ? prop.dateListed.slice(0,7) : ''}
+                    onChange={e => up({ dateListed: e.target.value ? e.target.value + '-01' : '' })}
+                    style={{ background:'none', border:'none', outline:'none', fontSize:10, color:'var(--ink3)', fontFamily:"'DM Sans',sans-serif", padding:0, width:'100%' }}
+                  />
                 </div>
               </div>
               <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
                 <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Sq ft</div>
                 <input type="number" value={prop.sqft||''} onChange={e=>onSqftChange(+e.target.value)} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
-                <div style={{ fontSize:10, marginTop:3, color: prop.sqft && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
+                <div style={{ fontSize:10, color:'var(--ink3)', marginTop:3 }}>
+                  {prop.sqft ? prop.sqft.toLocaleString('en-GB') : ''}
+                </div>
+                <div style={{ fontSize:10, marginTop:2, color: prop.sqft && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
                   {prop.sqft && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqft).toLocaleString('en-GB')}/sqft` : '—'}
                 </div>
               </div>
               <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:'10px 10px 8px' }}>
                 <div style={{ fontSize:9, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Sq m</div>
                 <input type="number" value={prop.sqm||''} onChange={e=>onSqmChange(+e.target.value)} placeholder="—" style={{ width:'100%', fontSize:14, fontWeight:700, color:'var(--ink)', background:'none', border:'none', outline:'none', padding:0, fontFamily:"'DM Sans',sans-serif", MozAppearance:'textfield' }} />
-                <div style={{ fontSize:10, marginTop:3, color: prop.sqm && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
+                <div style={{ fontSize:10, color:'var(--ink3)', marginTop:3 }}>
+                  {prop.sqm ? prop.sqm.toLocaleString('en-GB') : ''}
+                </div>
+                <div style={{ fontSize:10, marginTop:2, color: prop.sqm && prop.listPrice ? 'var(--accent)' : 'var(--ink3)', fontWeight:500 }}>
                   {prop.sqm && prop.listPrice ? `£${Math.round(prop.listPrice/prop.sqm).toLocaleString('en-GB')}/sqm` : '—'}
                 </div>
               </div>
@@ -671,9 +690,14 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
               <div key={type}>
                 {sL(label)}
                 <CompTable type={type} dateLabel={dateLabel} />
-                <button onClick={()=>{setCompType(type);setAddCompOpen(true)}} style={{width:'100%',fontSize:13,marginBottom:12,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'10px 14px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-                  <i className="ti ti-plus" style={{fontSize:12}} /> Add comparable
-                </button>
+                <div style={{display:'flex',gap:8,marginBottom:12}}>
+                  <button onClick={()=>{setCompType(type);setAddCompOpen(true)}} style={{flex:1,fontSize:12,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
+                    <i className="ti ti-plus" style={{fontSize:11}} /> Add
+                  </button>
+                  <button onClick={()=>{setImportPSType(type);setImportPSOpen(true)}} style={{flex:1,fontSize:12,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
+                    <i className="ti ti-download" style={{fontSize:11}} /> Import from sales
+                  </button>
+                </div>
               </div>
             ))}
           </>
@@ -736,6 +760,28 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
         <FormRow label="Reason (optional)"><Input value={archiveReason} onChange={e=>setArchiveReason(e.target.value)} placeholder="Brief note…" /></FormRow>
       </Sheet>
 
+      {/* Archive → past sales prompt */}
+      <Sheet open={archiveSaleOpen} onClose={()=>setArchiveSaleOpen(false)} title="Archive property"
+        footer={<>
+          <Btn onClick={()=>setArchiveSaleOpen(false)}>Cancel</Btn>
+          <Btn variant="ghost" full onClick={()=>{setArchiveSaleOpen(false);setArchiveOpen(true)}}>Skip</Btn>
+          <Btn variant="primary" full onClick={()=>{
+            const sale = {
+              id: uid(), address: prop.address, postcode: prop.postcode,
+              guide: prop.listPrice, dateListed: prop.dateListed, dateSold: '',
+              soldPrice: prop.finalSoldPrice || 0, sqft: prop.sqft, sqm: prop.sqm,
+              beds: prop.beds, outdoor: prop.outdoorSpace || '', notes: prop.notes || '',
+              auction: prop.methodOfSale === 'auction',
+            }
+            addPastSale(sale)
+            setArchiveSaleOpen(false)
+            setArchiveOpen(true)
+          }}>Add to past sales</Btn>
+        </>}>
+        <p style={{fontSize:13,color:'var(--ink2)',lineHeight:1.6,marginBottom:12}}>Would you like to add <strong>{prop.address}</strong> to Past Sales before archiving?</p>
+        <p style={{fontSize:12,color:'var(--ink3)'}}>This lets you use it as a comparable on other properties.</p>
+      </Sheet>
+
       <Sheet open={addPhOpen} onClose={()=>setAddPhOpen(false)} title="Add price point"
         footer={<><Btn onClick={()=>setAddPhOpen(false)}>Cancel</Btn><Btn variant="primary" full onClick={()=>{if(!phDate&&!phPrice)return;up({priceHistory:[...(prop.priceHistory||[]),{date:phDate,price:parseFloat(phPrice)||0}]});setAddPhOpen(false);setPhDate('');setPhPrice('');}}>Add</Btn></>}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -755,6 +801,38 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
           <FormRow label="Date"><Input type="date" value={compForm.date} onChange={e=>setCompForm(s=>({...s,date:e.target.value}))} /></FormRow>
           <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
         </div>
+      </Sheet>
+
+      {/* Import from past sales sheet */}
+      <Sheet open={importPSOpen} onClose={()=>setImportPSOpen(false)} title={`Import ${importPSType === 'forsale' ? 'for-sale' : importPSType === 'auction' ? 'auction' : 'sold'} comparable`}
+        footer={<Btn full onClick={()=>setImportPSOpen(false)}>Close</Btn>}>
+        {pastSales.filter(s => importPSType === 'auction' ? s.auction : importPSType === 'sold' ? !s.auction : true).length === 0
+          ? <p style={{fontSize:13,color:'var(--ink3)',textAlign:'center',padding:16}}>No past sales entries yet</p>
+          : pastSales
+              .filter(s => importPSType === 'auction' ? s.auction : importPSType === 'sold' ? !s.auction : true)
+              .map(s => {
+                const psf = s.sqft ? Math.round(s.soldPrice / s.sqft) : 0
+                const alreadyAdded = (prop.comparables?.[importPSType] || []).some((c: any) => c.id === s.id)
+                return (
+                  <div key={s.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--cream2)'}}>
+                    <div style={{flex:1,minWidth:0,marginRight:10}}>
+                      <div style={{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.address}</div>
+                      <div style={{fontSize:11,color:'var(--ink3)'}}>{s.postcode}{s.dateSold ? ' · '+fmtDate(s.dateSold) : ''}{s.soldPrice ? ' · '+gbp(s.soldPrice) : ''}{psf ? ' · £'+psf.toLocaleString('en-GB')+'/sqft' : ''}</div>
+                    </div>
+                    {alreadyAdded
+                      ? <span style={{fontSize:11,color:'var(--green)',flexShrink:0}}>Added ✓</span>
+                      : <button onClick={()=>{
+                          const c = { id: s.id, address: s.address, postcode: s.postcode, price: s.soldPrice, date: s.dateSold, sqft: s.sqft, psf: psf||undefined, ticked: false }
+                          const comps = { ...prop.comparables, [importPSType]: [...(prop.comparables?.[importPSType]||[]), c] }
+                          up({ comparables: comps })
+                        }} style={{fontSize:12,padding:'5px 10px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>
+                          Add
+                        </button>
+                    }
+                  </div>
+                )
+              })
+        }
       </Sheet>
 
       <Sheet open={clOpen} onClose={()=>setClOpen(false)} title="Change log"

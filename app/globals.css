@@ -89,3 +89,9 @@ input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: poin
   #app-root { height: 100dvh; overflow: hidden; }
   .app-shell { height: 100dvh; }
 }
+
+/* Prevent Leaflet map tiles/controls overlapping UI on desktop */
+.leaflet-container { z-index: 0 !important; }
+.leaflet-pane { z-index: 0 !important; }
+.leaflet-top, .leaflet-bottom { z-index: 1 !important; }
+.leaflet-popup-pane { z-index: 2 !important; }
