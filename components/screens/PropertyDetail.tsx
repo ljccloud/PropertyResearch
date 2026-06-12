@@ -34,6 +34,13 @@ function Val({ children, colour }: { children: React.ReactNode; colour?: string 
 
 const SQM_PER_SQFT = 0.092903
 
+function fmtDate(d: string): string {
+  if (!d) return '—'
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return d
+  return dt.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+}
+
 export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const { properties, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
   const p = properties.find(x => x.id === propertyId)
@@ -78,10 +85,9 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
   // ── Calculations ──────────────────────────────────────────────
   const sdlt = calcSDLT(prop.offerPrice, assumptions.sdltType)
-  const auctionFeePct = prop.purchaseFees?.auctionFeePct ?? assumptions.defAF
-  const af = Math.round(prop.offerPrice * (auctionFeePct / 100))
+  const af = prop.purchaseFees?.auctionFeeFlat || 0
   const scPct = prop.purchaseFees?.specialConditionsPct || 0
-  const sc = Math.round(prop.offerPrice * (scPct / 100))
+  const sc = Math.round(prop.offerPrice * (scPct / 100) * 1.2)
   const extraPFTotal = extraPFRows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0)
   // Purchase fees excludes SDLT (shown separately)
   const legalFees = prop.purchaseFees?.legalFees ?? assumptions.defLegal
@@ -111,7 +117,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const sensCells = [-0.10, -0.05, 0, 0.05, 0.10].map(d => {
     const o2 = prop.offerPrice * (1 + d)
     const s2 = calcSDLT(o2, assumptions.sdltType)
-    const f2 = s2.total + Math.round(o2 * auctionFeePct / 100) + Math.round(o2 * scPct / 100) + legalFees + extraPFTotal
+    const f2 = s2.total + af + Math.round(o2 * scPct / 100) + legalFees + extraPFTotal
     const profit = prop.resaleEst - (o2 + f2 + renoTotal + lease.total + fin.total)
     return { profit: Math.round(profit) }
   })
@@ -246,10 +252,46 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
               />
               <input
                 value={prop.postcode||''}
-                onChange={e=>up({postcode:e.target.value})}
+                onChange={e=>up({postcode:e.target.value})} autoComplete="postal-code"
                 placeholder="Postcode"
-                style={{ width:'100%', fontSize:12, color:'var(--ink3)', background:'none', border:'none', outline:'none', marginBottom:10, padding:0, fontFamily:"'DM Sans',sans-serif" }}
+                style={{ width:'100%', fontSize:12, color:'var(--ink3)', background:'none', border:'none', outline:'none', marginBottom:8, padding:0, fontFamily:"'DM Sans',sans-serif" }}
               />
+              {/* Tenure + method of sale row */}
+              <div style={{display:'flex',gap:8,marginBottom:8}}>
+                <select value={prop.tenure||''} onChange={e=>up({tenure:e.target.value as any})} style={{flex:1,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:"'DM Sans',sans-serif",outline:'none',color:prop.tenure?'var(--ink)':'var(--ink3)',WebkitAppearance:'none',appearance:'none'}}>
+                  <option value="">Tenure...</option>
+                  <option value="freehold">Freehold</option>
+                  <option value="leasehold">Leasehold</option>
+                  <option value="share-of-freehold">Share of freehold</option>
+                </select>
+                <select value={prop.methodOfSale||''} onChange={e=>up({methodOfSale:e.target.value as any})} style={{flex:1,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:"'DM Sans',sans-serif",outline:'none',color:prop.methodOfSale?'var(--ink)':'var(--ink3)',WebkitAppearance:'none',appearance:'none'}}>
+                  <option value="">Method of sale...</option>
+                  <option value="private-treaty">Private Treaty</option>
+                  <option value="auction">Auction</option>
+                </select>
+              </div>
+              {/* Lease years + outdoor + service charge */}
+              <div style={{display:'flex',gap:8,marginBottom:8}}>
+                {prop.tenure==='leasehold' && (
+                  <div style={{display:'flex',alignItems:'center',gap:4,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 8px',flex:1}}>
+                    <span style={{fontSize:11,color:'var(--ink3)',whiteSpace:'nowrap'}}>Yrs left</span>
+                    <input type="number" value={prop.leaseYears||''} onChange={e=>up({leaseYears:+e.target.value} as any)} style={{width:'100%',fontSize:11,background:'none',border:'none',outline:'none',fontFamily:"'DM Sans',sans-serif",color:'var(--ink)'}} />
+                  </div>
+                )}
+                <select value={prop.outdoorSpace||''} onChange={e=>up({outdoorSpace:e.target.value as any})} style={{flex:1,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 8px',fontSize:11,fontFamily:"'DM Sans',sans-serif",outline:'none',color:prop.outdoorSpace?'var(--ink)':'var(--ink3)',WebkitAppearance:'none',appearance:'none'}}>
+                  <option value="">Outdoor...</option>
+                  <option value="none">None</option>
+                  <option value="shared-garden">Shared garden</option>
+                  <option value="garden">Garden</option>
+                  <option value="balcony">Balcony</option>
+                  <option value="terrace">Terrace</option>
+                  <option value="roof-terrace">Roof terrace</option>
+                </select>
+                <div style={{display:'flex',alignItems:'center',gap:4,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 8px',flex:1}}>
+                  <span style={{fontSize:11,color:'var(--ink3)',whiteSpace:'nowrap'}}>Service £</span>
+                  <input type="number" value={prop.serviceCharge||''} onChange={e=>up({serviceCharge:+e.target.value} as any)} style={{width:'100%',fontSize:11,background:'none',border:'none',outline:'none',fontFamily:"'DM Sans',sans-serif",color:'var(--ink)'}} />
+                </div>
+              </div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
                 <div
                   onClick={() => {
@@ -338,13 +380,13 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
             </div>
             {card(
               !prop.priceHistory?.length
-                ? <div style={{fontSize:12,color:'var(--ink3)',textAlign:'center',padding:6}}>No history yet</div>
+                ? null
                 : prop.priceHistory.slice().sort((a,b)=>new Date(a.date).getTime()-new Date(b.date).getTime()).map((h,i,arr) => {
                     const prev = i > 0 ? arr[i-1].price : null
                     const mv = prev !== null ? h.price - prev : null
                     return (
                       <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<arr.length-1?'1px solid var(--cream2)':'none',fontSize:12}}>
-                        <span style={{color:'var(--ink2)',minWidth:82}}>{h.date}</span>
+                        <span style={{color:'var(--ink2)',minWidth:72}}>{fmtDate(h.date)}</span>
                         <span style={{fontWeight:500,flex:1}}>{gbp(h.price)}</span>
                         {mv !== null && mv !== 0 && <span style={{fontSize:11,padding:'2px 6px',borderRadius:99,background:mv>0?'var(--red-bg)':'var(--green-bg)',color:mv>0?'var(--red)':'var(--green)'}}>{mv>0?'+':''}{gbp(mv)}</span>}
                       </div>
@@ -452,17 +494,12 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
             <Collapsible title="Purchase fees">
               <CalcTable rows={[
                 {
-                  label: <span style={{color:'var(--ink2)',display:'flex',alignItems:'center',gap:4}}>
-                    Auction fee
-                    <input
-                      type="number"
-                      value={prop.purchaseFees?.auctionFeePct ?? assumptions.defAF}
-                      onChange={e=>up({purchaseFees:{...prop.purchaseFees,auctionFeePct:+e.target.value}})}
-                      style={{width:36,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:3,padding:'2px 4px',fontSize:11,textAlign:'right',fontFamily:"'DM Sans',sans-serif",outline:'none'}}
-                    />
-                    <span style={{fontSize:11,color:'var(--ink3)'}}>%</span>
-                  </span>,
-                  value: <Val>{gbp(af)}</Val>
+                  label: <span style={{color:'var(--ink2)'}}>Auction fee</span>,
+                  value: <TInput
+                    value={prop.purchaseFees?.auctionFeeFlat ?? ''}
+                    onChange={v=>up({purchaseFees:{...prop.purchaseFees,auctionFeeFlat:v}})}
+                    placeholder="0"
+                  />
                 },
                 row(
                   <span style={{display:'flex',alignItems:'center',gap:4,fontSize:13}}>

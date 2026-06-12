@@ -67,7 +67,7 @@ export interface Property {
   leaseExtension: LeaseExtension
   purchaseFees: {
     specialConditionsPct: number
-    auctionFeePct?: number
+    auctionFeeFlat?: number
     legalFees?: number
     extraItems: { label: string; value: number }[]
   }
@@ -87,6 +87,10 @@ export interface Property {
   archivedDate: string
   // Optional extras
   leaseYears?: number
+  tenure?: 'freehold' | 'leasehold' | 'share-of-freehold' | ''
+  serviceCharge?: number
+  methodOfSale?: 'private-treaty' | 'auction' | ''
+  outdoorSpace?: 'none' | 'shared-garden' | 'garden' | 'balcony' | 'terrace' | 'roof-terrace' | ''
 }
 
 export interface PastSale {
