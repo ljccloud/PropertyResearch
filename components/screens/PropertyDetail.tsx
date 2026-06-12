@@ -56,7 +56,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const [phPrice, setPhPrice] = useState('')
   const [addCompOpen, setAddCompOpen] = useState(false)
   const [compType, setCompType] = useState<'forsale'|'sold'|'auction'>('sold')
-  const [compForm, setCompForm] = useState({ address: '', postcode: '', price: '', date: '', sqft: '' })
+  const [compForm, setCompForm] = useState({ address: '', postcode: '', price: '', date: '', sqft: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '' })
   const [compDateFilter, setCompDateFilter] = useState<'all'|'12'|'24'>('all')
   const [importPSOpen, setImportPSOpen] = useState(false)
   const [importPSType, setImportPSType] = useState<'forsale'|'sold'|'auction'>('sold')
@@ -135,26 +135,50 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   }
 
   function ms(type: 'forsale'|'sold'|'auction') {
-    const ticked = fByDate(prop.comparables?.[type] || []).filter(c => c.ticked && c.psf)
-    if (!ticked.length) return { h: '—', m: '—', l: '—' }
-    const vals = ticked.map(c => c.psf!).sort((a, b) => b - a)
-    return { h: '£'+vals[0], m: '£'+Math.round(vals.reduce((a,b)=>a+b,0)/vals.length), l: '£'+vals[vals.length-1] }
+    const ticked = fByDate(prop.comparables?.[type] || []).filter((c: any) => c.ticked && c.psf)
+    if (!ticked.length) return null
+    const vals = ticked.map((c: any) => c.psf as number).sort((a, b) => b - a)
+    const sqft = prop.sqft || 0
+    function cell(psfVal: number) {
+      const implied = sqft ? Math.round(psfVal * sqft) : null
+      return { psf: psfVal, implied }
+    }
+    return {
+      h: cell(vals[0]),
+      m: cell(Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)),
+      l: cell(vals[vals.length-1]),
+    }
   }
   const msFS = ms('forsale'), msS = ms('sold'), msA = ms('auction')
 
   function addComp() {
     const c: Comparable = {
       id: uid(), address: compForm.address, postcode: compForm.postcode,
-      price: parseFloat(compForm.price)||0, date: compForm.date,
+      price: parseFloat(compForm.price)||0, date: compForm.date ? compForm.date + '-01' : '',
       sqft: parseFloat(compForm.sqft)||0, ticked: false,
-    }
+      beds: parseFloat(compForm.beds)||undefined,
+      baths: parseFloat(compForm.baths)||undefined,
+      tenure: compForm.tenure as any,
+      outdoorSpace: compForm.outdoorSpace as any,
+      guidePrice: parseFloat(compForm.guidePrice)||undefined,
+    } as any
     if (c.sqft) c.psf = Math.round(c.price / c.sqft)
     const comps = { ...prop.comparables, [compType]: [...(prop.comparables?.[compType]||[]), c] }
     up({ comparables: comps })
-    const sale: PastSale = { id: c.id, address: c.address, postcode: c.postcode, guide: 0, dateListed: '', dateSold: c.date, soldPrice: c.price, sqft: c.sqft, sqm: 0, beds: 0, outdoor: '', notes: '', auction: compType === 'auction' }
-    addPastSale(sale)
+    // Also add to past sales
+    const alreadyInSales = pastSales.some(s => s.id === c.id)
+    if (!alreadyInSales) {
+      const sale: PastSale = {
+        id: c.id, address: c.address, postcode: c.postcode,
+        guide: parseFloat(compForm.guidePrice)||0, dateListed: '', dateSold: c.date,
+        soldPrice: c.price, sqft: c.sqft, sqm: 0,
+        beds: parseFloat(compForm.beds)||0, outdoor: compForm.outdoorSpace || '',
+        notes: '', auction: compType === 'auction',
+      }
+      addPastSale(sale)
+    }
     setAddCompOpen(false)
-    setCompForm({ address: '', postcode: '', price: '', date: '', sqft: '' })
+    setCompForm({ address: '', postcode: '', price: '', date: '', sqft: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '' })
   }
 
   function tickComp(type: 'forsale'|'sold'|'auction', idx: number) {
@@ -183,24 +207,51 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   function CompTable({ type, dateLabel }: { type: 'forsale'|'sold'|'auction'; dateLabel: string }) {
     const comps = fByDate(prop.comparables?.[type] || [])
     if (!comps.length) return <div style={{ fontSize: 12, color: 'var(--ink3)', padding: '4px 0 8px' }}>None added yet</div>
+    const showExtra = type === 'sold' || type === 'auction'
+    const TENURE: Record<string,string> = { freehold:'Freehold', leasehold:'Leasehold', 'share-of-freehold':'Share of freehold' }
+    const OUTDOOR: Record<string,string> = { none:'None','shared-garden':'Shared garden',garden:'Garden',balcony:'Balcony',terrace:'Terrace','roof-terrace':'Roof terrace' }
     return (
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
-          <colgroup><col style={{width:20}}/><col/><col style={{width:72}}/><col style={{width:68}}/><col style={{width:56}}/></colgroup>
-          <thead><tr>
-            <th style={th}></th><th style={th}>Address</th><th style={th}>{dateLabel}</th><th style={th}>Price</th><th style={th}>£/sqft</th>
-          </tr></thead>
+        <table style={{ width:'100%', borderCollapse:'collapse', background:'#fff', borderRadius:14, overflow:'hidden', border:'1px solid var(--border)', marginBottom:8, fontSize:12 }}>
+          <thead>
+            <tr>
+              <th style={{...th,width:20}}></th>
+              <th style={th}>Address</th>
+              {type==='auction' && <th style={{...th,width:60}}>Guide</th>}
+              <th style={{...th,width:60}}>{dateLabel}</th>
+              <th style={{...th,width:68}}>Price</th>
+              <th style={{...th,width:56}}>£/sqft</th>
+            </tr>
+          </thead>
           <tbody>
-            {comps.map((c, i) => (
-              <tr key={c.id}>
-                <td style={td}>
-                  <div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div>
-                </td>
-                <td style={td}><div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.address}</div><div style={{fontSize:10,color:'var(--ink3)'}}>{c.postcode}</div></td>
-                <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date}</td>
-                <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
-                <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf : '—'}</td>
-              </tr>
+            {comps.map((c: any, i: number) => (
+              <>
+                <tr key={c.id} style={{borderBottom: showExtra ? 'none' : '1px solid var(--border)'}}>
+                  <td style={td}>
+                    <div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div>
+                  </td>
+                  <td style={td}>
+                    <div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.address}</div>
+                    <div style={{fontSize:10,color:'var(--ink3)'}}>{c.postcode}</div>
+                  </td>
+                  {type==='auction' && <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.guidePrice ? gbp(c.guidePrice) : '—'}</td>}
+                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date ? fmtDate(c.date) : '—'}</td>
+                  <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
+                  <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf.toLocaleString('en-GB') : '—'}</td>
+                </tr>
+                {showExtra && (
+                  <tr key={c.id+'-extra'} style={{borderBottom:'1px solid var(--border)'}}>
+                    <td></td>
+                    <td colSpan={type==='auction'?4:3} style={{...td,paddingTop:2,paddingBottom:6}}>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        {(c.beds||c.baths) && <span style={{fontSize:10,color:'var(--ink3)'}}>{c.beds||'—'}/{c.baths||'—'} bed/bath</span>}
+                        {c.tenure && <span style={{fontSize:10,color:'var(--ink3)'}}>{TENURE[c.tenure]||c.tenure}</span>}
+                        {c.outdoorSpace && <span style={{fontSize:10,color:'var(--ink3)'}}>{OUTDOOR[c.outdoorSpace]||c.outdoorSpace}</span>}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
@@ -795,12 +846,45 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
         <FormRow label="Address"><Input value={compForm.address} onChange={e=>setCompForm(s=>({...s,address:e.target.value}))} /></FormRow>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
           <FormRow label="Postcode"><Input value={compForm.postcode} onChange={e=>setCompForm(s=>({...s,postcode:e.target.value}))} /></FormRow>
-          <FormRow label="Price"><Input type="number" value={compForm.price} onChange={e=>setCompForm(s=>({...s,price:e.target.value}))} /></FormRow>
+          <FormRow label={compType==='forsale'?'Asking price':'Sold price'}><Input type="number" value={compForm.price} onChange={e=>setCompForm(s=>({...s,price:e.target.value}))} /></FormRow>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          <FormRow label="Date"><Input type="date" value={compForm.date} onChange={e=>setCompForm(s=>({...s,date:e.target.value}))} /></FormRow>
+        {compType==='auction' && (
+          <FormRow label="Guide price"><Input type="number" value={compForm.guidePrice} onChange={e=>setCompForm(s=>({...s,guidePrice:e.target.value}))} /></FormRow>
+        )}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
+          <FormRow label={compType==='forsale'?'Date listed':'Month/year sold'}>
+            <input type="month" value={compForm.date} onChange={e=>setCompForm(s=>({...s,date:e.target.value}))}
+              style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,color:compForm.date?'var(--ink)':'var(--ink3)',outline:'none',WebkitAppearance:'none',appearance:'none'}} />
+          </FormRow>
           <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
         </div>
+        {(compType==='sold'||compType==='auction') && (<>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
+            <FormRow label="Beds"><Input type="number" value={compForm.beds} onChange={e=>setCompForm(s=>({...s,beds:e.target.value}))} /></FormRow>
+            <FormRow label="Baths"><Input type="number" value={compForm.baths} onChange={e=>setCompForm(s=>({...s,baths:e.target.value}))} /></FormRow>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <FormRow label="Tenure">
+              <select value={compForm.tenure} onChange={e=>setCompForm(s=>({...s,tenure:e.target.value}))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:compForm.tenure?'var(--ink)':'var(--ink3)'}}>
+                <option value="">Select...</option>
+                <option value="freehold">Freehold</option>
+                <option value="leasehold">Leasehold</option>
+                <option value="share-of-freehold">Share of freehold</option>
+              </select>
+            </FormRow>
+            <FormRow label="Outdoor">
+              <select value={compForm.outdoorSpace} onChange={e=>setCompForm(s=>({...s,outdoorSpace:e.target.value}))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:compForm.outdoorSpace?'var(--ink)':'var(--ink3)'}}>
+                <option value="">Select...</option>
+                <option value="none">None</option>
+                <option value="shared-garden">Shared garden</option>
+                <option value="garden">Garden</option>
+                <option value="balcony">Balcony</option>
+                <option value="terrace">Terrace</option>
+                <option value="roof-terrace">Roof terrace</option>
+              </select>
+            </FormRow>
+          </div>
+        </>)}
       </Sheet>
 
       {/* Import from past sales sheet */}
