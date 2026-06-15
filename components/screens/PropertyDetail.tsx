@@ -60,6 +60,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
   const [compDateFilter, setCompDateFilter] = useState<'all'|'12'|'24'>('all')
   const [importPSOpen, setImportPSOpen] = useState(false)
   const [importPSType, setImportPSType] = useState<'forsale'|'sold'|'auction'>('sold')
+  const [importPSSearch, setImportPSSearch] = useState('')
   const [archiveSaleOpen, setArchiveSaleOpen] = useState(false)
   const [pendingArchiveOutcome, setPendingArchiveOutcome] = useState<'Purchased'|'Passed'|'Outbid'>('Purchased')
   const [pendingArchiveReason, setPendingArchiveReason] = useState('')
@@ -188,6 +189,12 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
     up({ comparables: { ...prop.comparables, [type]: all } })
   }
 
+  function removeComp(type: 'forsale'|'sold'|'auction', id: string) {
+    // Remove from comparables list only — data in pastSales is untouched
+    const all = (prop.comparables?.[type] || []).filter((c: any) => c.id !== id)
+    up({ comparables: { ...prop.comparables, [type]: all } })
+  }
+
   // ── Style helpers ─────────────────────────────────────────────
   const th: React.CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--border)', color: 'var(--ink3)', fontWeight: 700, fontSize: 10, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '.05em', background: 'var(--cream2)' }
   const td: React.CSSProperties = { padding: '6px 10px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
@@ -221,6 +228,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
               <th style={{...th,width:60}}>{dateLabel}</th>
               <th style={{...th,width:68}}>Price</th>
               <th style={{...th,width:56}}>£/sqft</th>
+            <th style={{...th,width:24}}></th>
             </tr>
           </thead>
           <tbody>
@@ -238,6 +246,9 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
                   <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date ? fmtDate(c.date) : '—'}</td>
                   <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
                   <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf.toLocaleString('en-GB') : '—'}</td>
+                  <td style={{...td,width:24}}>
+                    <div onClick={() => removeComp(type, c.id)} title="Remove from comparables" style={{width:18,height:18,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink3)',fontSize:13,borderRadius:4,lineHeight:1}}>×</div>
+                  </td>
                 </tr>
                 {showExtra && (
                   <tr style={{borderBottom:'1px solid var(--border)'}}>

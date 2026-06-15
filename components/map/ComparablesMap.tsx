@@ -119,7 +119,7 @@ export function ComparablesMap({
 
       // Helper: coloured circle DivIcon
       function circleIcon(colour: string, large = false) {
-        const s = large ? 18 : 12
+        const s = large ? 16 : 11
         return L.divIcon({
           className: '',
           html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${colour};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25)"></div>`,
@@ -128,8 +128,16 @@ export function ComparablesMap({
         })
       }
 
-      // Subject property pin
-      L.marker(subjectCoords, { icon: circleIcon(COLOURS.subject, true) })
+      // Subject property pin — use divIcon to avoid broken default Leaflet icon in Next.js
+      const subjectMarker = L.marker(subjectCoords, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:20px;height:20px;border-radius:50%;background:${COLOURS.subject};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35);position:relative;">
+            <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ${COLOURS.subject}"></div>
+          </div>`,
+          iconSize: [20, 28],
+          iconAnchor: [10, 28],
+      })
         .addTo(map)
         .bindPopup(`<strong style="font-family:DM Sans,sans-serif;font-size:12px">${subjectAddress || subjectPostcode}</strong>`)
 
