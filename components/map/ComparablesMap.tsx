@@ -137,6 +137,7 @@ export function ComparablesMap({
           </div>`,
           iconSize: [20, 28],
           iconAnchor: [10, 28],
+        })
       })
         .addTo(map)
         .bindPopup(`<strong style="font-family:DM Sans,sans-serif;font-size:12px">${subjectAddress || subjectPostcode}</strong>`)
