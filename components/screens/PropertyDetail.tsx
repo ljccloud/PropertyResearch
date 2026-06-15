@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useStore } from '@/lib/store'
 import { gbp, pct, ppsf, ppsm } from '@/lib/format'
 import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenovation, calcYield } from '@/lib/calculations'
@@ -225,8 +225,8 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
           </thead>
           <tbody>
             {comps.map((c: any, i: number) => (
-              <>
-                <tr key={c.id} style={{borderBottom: showExtra ? 'none' : '1px solid var(--border)'}}>
+              <Fragment key={c.id}>
+                <tr style={{borderBottom: showExtra ? 'none' : '1px solid var(--border)'}}>
                   <td style={td}>
                     <div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div>
                   </td>
@@ -240,7 +240,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
                   <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf.toLocaleString('en-GB') : '—'}</td>
                 </tr>
                 {showExtra && (
-                  <tr key={c.id+'-extra'} style={{borderBottom:'1px solid var(--border)'}}>
+                  <tr style={{borderBottom:'1px solid var(--border)'}}>
                     <td></td>
                     <td colSpan={type==='auction'?4:3} style={{...td,paddingTop:2,paddingBottom:6}}>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -251,7 +251,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -719,14 +719,34 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
         {tab === 'comparables' && (
           <>
             <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:14,padding:12,marginBottom:10}}>
-              <div style={{fontSize:12,fontWeight:600,color:'var(--ink)',marginBottom:8}}>Market summary — ticked comparables</div>
-              <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:3}}>
-                {['','High','Mid','Low'].map(h=><div key={h} style={{fontSize:10,color:'var(--ink3)',textAlign:'center',fontWeight:500,padding:3}}>{h}</div>)}
-                {([['For sale',msFS],['Sold',msS],['Auction',msA]] as const).map(([lbl,s]:any)=>[
-                  <div key={lbl} style={{fontSize:11,color:'var(--ink2)',display:'flex',alignItems:'center'}}>{lbl}</div>,
-                  ...(['h','m','l'] as const).map(k=><div key={k} style={{fontSize:11,fontWeight:600,textAlign:'center',padding:'5px 4px',background:'#fff',borderRadius:8,border:'1px solid var(--border)'}}>{s[k]}</div>)
-                ])}
+              <div style={{fontSize:10,fontWeight:700,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10}}>Market summary — ticked comparables</div>
+              <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:4}}>
+                {['','High','Mid','Low'].map(h=>(
+                  <div key={h} style={{fontSize:10,color:'var(--ink3)',textAlign:'center',fontWeight:700,padding:'3px 2px',textTransform:'uppercase',letterSpacing:'.04em'}}>{h}</div>
+                ))}
+                {([['For sale',msFS],['Sold',msS],['Auction',msA]] as [string,ReturnType<typeof ms>][]).map(([lbl,s])=>(
+                  <Fragment key={lbl}>
+                    <div style={{fontSize:11,color:'var(--ink2)',display:'flex',alignItems:'center',fontWeight:500}}>{lbl}</div>
+                    {(['h','m','l'] as const).map(k=>(
+                      <div key={k} style={{background:'#fff',borderRadius:8,border:'1px solid var(--border)',padding:'5px 4px',textAlign:'center'}}>
+                        {s && s[k] ? (
+                          <>
+                            <div style={{fontSize:12,fontWeight:700,color:'var(--ink)',lineHeight:1.2}}>
+                              {s[k]!.implied ? '£'+s[k]!.implied!.toLocaleString('en-GB') : '—'}
+                            </div>
+                            <div style={{fontSize:9,color:'var(--ink3)',marginTop:2,fontWeight:500}}>
+                              £{s[k]!.psf.toLocaleString('en-GB')}/sqft
+                            </div>
+                          </>
+                        ) : <span style={{fontSize:11,color:'var(--ink3)'}}>—</span>}
+                      </div>
+                    ))}
+                  </Fragment>
+                ))}
               </div>
+              {!prop.sqft && (
+                <div style={{fontSize:10,color:'var(--ink3)',marginTop:8,textAlign:'center'}}>Enter sq ft on Overview to see implied prices</div>
+              )}
             </div>
 
             <div style={{display:'flex',gap:5,marginBottom:10}}>
