@@ -64,8 +64,8 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   const [archiveSaleOpen, setArchiveSaleOpen] = useState(false)
   const [pendingArchiveOutcome, setPendingArchiveOutcome] = useState<'Purchased'|'Passed'|'Outbid'>('Purchased')
   const [pendingArchiveReason, setPendingArchiveReason] = useState('')
-  const [extraRenoRows, setExtraRenoRows] = useState<{id:string;label:string;value:string}[]>([])
-  const [extraPFRows, setExtraPFRows] = useState<{id:string;label:string;value:string}[]>([])
+  // extraRenoRows are stored in prop.renovation.extra — no local state needed
+  // extraPFRows stored in prop.purchaseFees.extraItems — no local state needed
   const [renoVat, setRenoVat] = useState(false)
   // Track whether loan has been manually overridden
   const [loanOverride, setLoanOverride] = useState(false)
@@ -94,15 +94,17 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   const af = prop.purchaseFees?.auctionFeeFlat || 0
   const scPct = prop.purchaseFees?.specialConditionsPct || 0
   const sc = Math.round(prop.offerPrice * (scPct / 100) * 1.2)
-  const extraPFTotal = extraPFRows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0)
+  const extraPFItems: {id:string;label:string;value:string}[] = (prop.purchaseFees as any)?.extraItems || []
+  const extraPFTotal = extraPFItems.reduce((s: number, r: any) => s + (parseFloat(r.value) || 0), 0)
   // Purchase fees excludes SDLT (shown separately)
   const legalFees = prop.purchaseFees?.legalFees ?? assumptions.defLegal
   const otherFees = af + sc + legalFees + extraPFTotal
   const totalFees = sdlt.total + otherFees
 
+  const renoExtra: {id:string;label:string;value:string}[] = (prop.renovation as any)?.extra || []
   const renoBase = Object.entries(prop.renovation || {})
     .reduce((s, [k, v]) => k !== 'extra' ? s + (Number(v) || 0) : s, 0)
-    + extraRenoRows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0)
+    + renoExtra.reduce((s: number, r: any) => s + (parseFloat(r.value) || 0), 0)
   const { withVat: renoTotal } = calcRenovation({ total: renoBase }, assumptions.vatRate, renoVat)
 
   const lease = calcLeaseExtension(prop.leaseExtension?.cost || 0, prop.leaseExtension?.legal || 0)
@@ -305,7 +307,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
       </div>
 
       {/* ── Tab content ── */}
-      <div style={{ flex:1,overflowY:'auto',padding:'12px 16px 80px' }}>
+      <div style={{ flex:1,overflowY:'auto',overflowX:'hidden',display:'flex',justifyContent:'center' }}>
 
         {/* TAB 1: OVERVIEW & FINANCIALS */}
         {tab === 'overview' && (
@@ -605,13 +607,22 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                     onChange={v=>up({purchaseFees:{...prop.purchaseFees,legalFees:v}})}
                   />
                 },
-                ...extraPFRows.map(r => row(
-                  <input value={r.label} onChange={e=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}} />,
-                  <TInput value={r.value} onChange={v=>setExtraPFRows(rows=>rows.map(x=>x.id===r.id?{...x,value:String(v)}:x))} />
+                ...extraPFItems.map((r:any)=>row(
+                  <input value={r.label} onChange={e=>{
+                    const updated=extraPFItems.map((x:any)=>x.id===r.id?{...x,label:e.target.value}:x)
+                    up({purchaseFees:{...prop.purchaseFees,extraItems:updated as any}})
+                  }} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}} />,
+                  <TInput value={r.value} onChange={v=>{
+                    const updated=extraPFItems.map((x:any)=>x.id===r.id?{...x,value:String(v)}:x)
+                    up({purchaseFees:{...prop.purchaseFees,extraItems:updated as any}})
+                  }} />
                 )),
                 totalRow('Total purchase fees', <Val>{gbp(otherFees)}</Val>),
               ]} />
-              <button onClick={()=>setExtraPFRows(r=>[...r,{id:uid(),label:'',value:''}])} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
+              <button onClick={()=>{
+                const updated=[...extraPFItems,{id:uid(),label:'',value:'0'}]
+                up({purchaseFees:{...prop.purchaseFees,extraItems:updated as any}})
+              }} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
                 <i className="ti ti-plus" style={{fontSize:11}} /> Add item
               </button>
             </Collapsible>
@@ -623,9 +634,23 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                   ({'paint':'Painting & decorating','kitchen':'Kitchen','bathroom':'Bathroom','electrics':'Electrics','boiler':'Boiler','windows':'New windows','builder':"Builder's estimate"} as Record<string,string>)[k],
                   <TInput value={prop.renovation?.[k]||''} onChange={v=>up({renovation:{...prop.renovation,[k]:v}})} />
                 )),
-                ...extraRenoRows.map(r => row(
-                  <input value={r.label} onChange={e=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,label:e.target.value}:x))} placeholder="Item name" style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}} />,
-                  <TInput value={r.value} onChange={v=>setExtraRenoRows(rows=>rows.map(x=>x.id===r.id?{...x,value:String(v)}:x))} />
+                ...renoExtra.map((r: any) => row(
+                  <input
+                    value={r.label}
+                    onChange={e=>{
+                      const updated = renoExtra.map((x:any)=>x.id===r.id?{...x,label:e.target.value}:x)
+                      up({renovation:{...prop.renovation,extra:updated}})
+                    }}
+                    placeholder="Item name"
+                    style={{width:120,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:4,padding:'4px 6px',fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:'none'}}
+                  />,
+                  <TInput
+                    value={r.value}
+                    onChange={v=>{
+                      const updated = renoExtra.map((x:any)=>x.id===r.id?{...x,value:String(v)}:x)
+                      up({renovation:{...prop.renovation,extra:updated}})
+                    }}
+                  />
                 )),
                 subtotalRow('Total estimate', gbp(renoBase)),
                 row(
@@ -636,7 +661,10 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                   renoVat ? <Val>{gbp(renoTotal)}</Val> : <span style={{color:'var(--ink3)'}}>—</span>
                 ),
               ]} />
-              <button onClick={()=>setExtraRenoRows(r=>[...r,{id:uid(),label:'',value:''}])} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
+              <button onClick={()=>{
+                const updated = [...renoExtra, {id:uid(),label:'',value:'0'}]
+                up({renovation:{...prop.renovation,extra:updated}})
+              }} style={{fontSize:12,marginTop:8,padding:'6px 10px',background:'none',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',gap:4}}>
                 <i className="ti ti-plus" style={{fontSize:11}} /> Add item
               </button>
             </Collapsible>

@@ -8,7 +8,7 @@ export interface Renovation {
   boiler: number
   windows: number
   builder: number
-  extra: { label: string; value: number }[]
+  extra: { id: string; label: string; value: string }[]
 }
 
 export interface Financing {
