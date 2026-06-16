@@ -919,35 +919,47 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
       </Sheet>
 
       {/* Import from past sales sheet */}
-      <Sheet open={importPSOpen} onClose={()=>setImportPSOpen(false)} title={`Import ${importPSType === 'forsale' ? 'for-sale' : importPSType === 'auction' ? 'auction' : 'sold'} comparable`}
-        footer={<Btn full onClick={()=>setImportPSOpen(false)}>Close</Btn>}>
-        {pastSales.filter(s => importPSType === 'auction' ? s.auction : importPSType === 'sold' ? !s.auction : true).length === 0
-          ? <p style={{fontSize:13,color:'var(--ink3)',textAlign:'center',padding:16}}>No past sales entries yet</p>
-          : pastSales
-              .filter(s => importPSType === 'auction' ? s.auction : importPSType === 'sold' ? !s.auction : true)
-              .map(s => {
-                const psf = s.sqft ? Math.round(s.soldPrice / s.sqft) : 0
-                const alreadyAdded = (prop.comparables?.[importPSType] || []).some((c: any) => c.id === s.id)
-                return (
-                  <div key={s.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--cream2)'}}>
-                    <div style={{flex:1,minWidth:0,marginRight:10}}>
-                      <div style={{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.address}</div>
-                      <div style={{fontSize:11,color:'var(--ink3)'}}>{s.postcode}{s.dateSold ? ' · '+fmtDate(s.dateSold) : ''}{s.soldPrice ? ' · '+gbp(s.soldPrice) : ''}{psf ? ' · £'+psf.toLocaleString('en-GB')+'/sqft' : ''}</div>
-                    </div>
-                    {alreadyAdded
-                      ? <span style={{fontSize:11,color:'var(--green)',flexShrink:0}}>Added ✓</span>
-                      : <button onClick={()=>{
-                          const c = { id: s.id, address: s.address, postcode: s.postcode, price: s.soldPrice, date: s.dateSold, sqft: s.sqft, psf: psf||undefined, ticked: false }
-                          const comps = { ...prop.comparables, [importPSType]: [...(prop.comparables?.[importPSType]||[]), c] }
-                          up({ comparables: comps })
-                        }} style={{fontSize:12,padding:'5px 10px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>
-                          Add
-                        </button>
-                    }
-                  </div>
-                )
-              })
-        }
+      <Sheet open={importPSOpen} onClose={()=>{setImportPSOpen(false);setImportPSSearch('')}} title={`Import ${importPSType === 'forsale' ? 'for-sale' : importPSType === 'auction' ? 'auction' : 'sold'} comparable`}
+        footer={<Btn full onClick={()=>{setImportPSOpen(false);setImportPSSearch('')}}>Close</Btn>}>
+        <div style={{display:'flex',alignItems:'center',gap:8,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'7px 10px',marginBottom:12}}>
+          <i className="ti ti-search" style={{color:'var(--ink3)',fontSize:14,flexShrink:0}} />
+          <input
+            value={importPSSearch}
+            onChange={e=>setImportPSSearch(e.target.value)}
+            placeholder="Search by address or postcode…"
+            style={{border:'none',background:'none',fontFamily:"'DM Sans',sans-serif",fontSize:13,flex:1,outline:'none',color:'var(--ink)'}}
+          />
+          {importPSSearch && <span onClick={()=>setImportPSSearch('')} style={{cursor:'pointer',color:'var(--ink3)',fontSize:16,lineHeight:1}}>×</span>}
+        </div>
+        {(()=>{
+          const base = (pastSales as any[]).filter(s => !s.deleted && (importPSType === 'auction' ? s.auction : importPSType === 'sold' ? !s.auction : true))
+          const filtered = importPSSearch
+            ? base.filter(s => (s.address+' '+s.postcode).toLowerCase().includes(importPSSearch.toLowerCase()))
+            : base
+          if (!filtered.length) return <p style={{fontSize:13,color:'var(--ink3)',textAlign:'center',padding:16}}>{importPSSearch ? 'No results' : 'No past sales entries yet'}</p>
+          return filtered.map((s: any) => {
+            const psf = s.sqft ? Math.round(s.soldPrice / s.sqft) : 0
+            const alreadyAdded = (prop.comparables?.[importPSType] || []).some((c: any) => c.id === s.id)
+            return (
+              <div key={s.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--cream2)'}}>
+                <div style={{flex:1,minWidth:0,marginRight:10}}>
+                  <div style={{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.address}</div>
+                  <div style={{fontSize:11,color:'var(--ink3)'}}>{s.postcode}{s.dateSold ? ' · '+fmtDate(s.dateSold) : ''}{s.soldPrice ? ' · '+gbp(s.soldPrice) : ''}{psf ? ' · £'+psf.toLocaleString('en-GB')+'/sqft' : ''}</div>
+                </div>
+                {alreadyAdded
+                  ? <span style={{fontSize:11,color:'var(--green)',flexShrink:0}}>Added ✓</span>
+                  : <button onClick={()=>{
+                      const c = { id: s.id, address: s.address, postcode: s.postcode, price: s.soldPrice, date: s.dateSold, sqft: s.sqft, psf: psf||undefined, ticked: false }
+                      const comps = { ...prop.comparables, [importPSType]: [...(prop.comparables?.[importPSType]||[]), c] }
+                      up({ comparables: comps })
+                    }} style={{fontSize:12,padding:'5px 10px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>
+                      Add
+                    </button>
+                }
+              </div>
+            )
+          })
+        })()}
       </Sheet>
 
       <Sheet open={clOpen} onClose={()=>setClOpen(false)} title="Change log"

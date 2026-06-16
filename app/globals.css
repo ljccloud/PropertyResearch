@@ -23,75 +23,145 @@
   --blue-bg: #E8F0F8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-  /* Reference style aliases */
   --bd: var(--border);
   --sf: #ffffff;
   --sf2: var(--cream2);
   --t2: var(--ink2);
   --t3: var(--ink3);
   --a: var(--accent);
+  /* Layout */
+  --sidebar-w: 280px;
+  --detail-max: 680px;
 }
 
-html, body { height: 100%; overflow: hidden; background: var(--cream); }
-body { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: 14px; }
+html, body {
+  height: 100%;
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  font-size: 14px;
+}
 
-/* Hide number input spinners globally */
+/* Hide number input spinners */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
 input[type=number] { -moz-appearance: textfield }
 
-/* Date input styling */
-input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; font-size: 11px }
+/* Date input */
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=month]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; font-size: 11px }
 
-/* ── Desktop layout ── */
-@media (min-width: 768px) {
-  body { overflow: auto; background: var(--cream2); }
-  html, body { height: 100%; }
-
-  /* Centre the app shell as a phone-like card on desktop */
-  #app-root {
-    display: flex;
-    min-height: 100vh;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 24px;
-    gap: 24px;
-  }
-
-  .app-shell {
-    width: 430px;
-    flex-shrink: 0;
-    height: calc(100vh - 48px);
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
-    position: sticky;
-    top: 24px;
-  }
-
-  /* Detail screen fills the right panel on desktop */
-  .detail-panel {
-    flex: 1;
-    max-width: 600px;
-    height: calc(100vh - 48px);
-    background: var(--cream);
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
-    position: sticky;
-    top: 24px;
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 767px) {
-  #app-root { height: 100dvh; overflow: hidden; }
-  .app-shell { height: 100dvh; }
-}
-
-/* Prevent Leaflet map tiles/controls overlapping UI on desktop */
+/* Prevent Leaflet overlapping UI */
 .leaflet-container { z-index: 0 !important; }
 .leaflet-pane { z-index: 0 !important; }
 .leaflet-top, .leaflet-bottom { z-index: 1 !important; }
 .leaflet-popup-pane { z-index: 2 !important; }
+
+/* ── PHONE (< 768px) ── */
+@media (max-width: 767px) {
+  html, body { overflow: hidden; }
+  #app-root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .app-shell {
+    width: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--cream);
+  }
+  .detail-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    background: var(--cream);
+  }
+  .detail-panel-hidden { display: none; }
+}
+
+/* ── TABLET / DESKTOP (≥ 768px) ── */
+@media (min-width: 768px) {
+  html, body { overflow: auto; background: var(--cream2); }
+
+  #app-root {
+    display: flex;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Left sidebar — nav + screen list */
+  .app-shell {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    height: 100vh;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--cream);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  /* Right content area */
+  .detail-panel {
+    flex: 1;
+    min-width: 0;
+    height: 100vh;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--cream);
+    overflow: hidden;
+  }
+
+  /* When no property is open, show a placeholder */
+  .detail-panel-empty {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cream2);
+    color: var(--ink3);
+    font-size: 13px;
+    gap: 10px;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+  }
+
+  /* Bottom nav becomes a sidebar nav on tablet+ */
+  .bottom-nav {
+    border-top: 1px solid var(--border);
+    border-right: none;
+  }
+
+  /* Screens scroll within the sidebar */
+  .screen-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 14px 24px;
+  }
+
+  /* FAB sits inside the sidebar */
+  .fab-btn {
+    bottom: calc(80px + var(--safe-bottom)) !important;
+    right: 14px !important;
+  }
+}
+
+/* ── LARGE DESKTOP (≥ 1200px) ── */
+@media (min-width: 1200px) {
+  :root { --sidebar-w: 320px; }
+}

@@ -68,11 +68,12 @@ export function CompareScreen() {
     { label: 'Date listed',           fn: p => fmtDate(p.dateListed) },
   ]
 
-  const lw = 130
+  const lw = 140
+  const cw = 160
 
   return (
     <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <div style={{ display: 'flex', minWidth: lw + 130 * props.length }}>
+      <div style={{ display: 'flex', minWidth: lw + cw * props.length }}>
 
         {/* Label column */}
         <div style={{ width: lw, flexShrink: 0 }}>
@@ -93,7 +94,7 @@ export function CompareScreen() {
 
         {/* Property columns */}
         {props.map(p => (
-          <div key={p.id} style={{ width: 130, flexShrink: 0, padding: '0 4px' }}>
+          <div key={p.id} style={{ width: cw, flexShrink: 0, padding: '0 4px' }}>
             {/* Column header */}
             <div style={{
               background: 'var(--cream2)', borderRadius: 10, padding: '8px 10px',

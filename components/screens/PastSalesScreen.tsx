@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { gbp } from '@/lib/format'
 import { Sheet } from '@/components/ui/Sheet'
@@ -19,6 +19,12 @@ export function PastSalesScreen() {
   const { pastSales, addPastSale, updatePastSale } = useStore()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all'|'sold'|'auction'>('all')
+
+  useEffect(() => {
+    function handleFab() { setAddOpen(true) }
+    window.addEventListener('fab-action', handleFab)
+    return () => window.removeEventListener('fab-action', handleFab)
+  }, [])
   const [addOpen, setAddOpen] = useState(false)
   const [detailSale, setDetailSale] = useState<PastSale | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -143,9 +149,7 @@ export function PastSalesScreen() {
       {filter !== 'sold' && <Section title="Sold at auction" items={auction} />}
       {!filtered.length && <p style={{ textAlign: 'center', color: 'var(--ink3)', padding: 28, fontSize: 13 }}>No entries yet. Tap + to add.</p>}
 
-      <button onClick={() => setAddOpen(true)} style={{ position: 'fixed', bottom: 'calc(84px + env(safe-area-inset-bottom,0px))', right: 16, width: 50, height: 50, background: 'var(--accent)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#fff', zIndex: 99, boxShadow: '0 2px 10px rgba(139,111,71,.3)' }}>
-        <i className="ti ti-plus" />
-      </button>
+
 
       {/* Add past sale sheet */}
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add past sale"
@@ -178,11 +182,11 @@ export function PastSalesScreen() {
             <option value="roof-terrace">Roof terrace</option>
           </select>
         </FormRow>
-        <FormRow label="Notes"><Textarea value={form.notes} onChange={e => setForm(s => ({ ...s, notes: e.target.value }))} style={{ minHeight: 60 }} /></FormRow>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
           <input type="checkbox" id="as-auction" checked={form.auction} onChange={e => setForm(s => ({ ...s, auction: e.target.checked }))} />
           <label htmlFor="as-auction" style={{ fontSize: 13, cursor: 'pointer' }}>Sold at auction</label>
         </div>
+        <FormRow label="Notes"><Textarea value={form.notes} onChange={e => setForm(s => ({ ...s, notes: e.target.value }))} style={{ minHeight: 60 }} /></FormRow>
       </Sheet>
 
       {/* Detail sheet */}

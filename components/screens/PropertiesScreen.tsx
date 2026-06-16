@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { newProperty } from '@/types'
 import type { Property } from '@/types'
@@ -37,6 +37,12 @@ export function PropertiesScreen({ onOpenProperty }: Props) {
   const { properties, compareIds, toggleCompare, addProperty } = useStore()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+
+  useEffect(() => {
+    function handleFab() { setSheetOpen(true) }
+    window.addEventListener('fab-action', handleFab)
+    return () => window.removeEventListener('fab-action', handleFab)
+  }, [])
   const [sheetOpen, setSheetOpen] = useState(false)
   const [form, setForm] = useState({
     address: '', postcode: '', listPrice: '', sqft: '', sqm: '',
@@ -140,10 +146,7 @@ export function PropertiesScreen({ onOpenProperty }: Props) {
         : filtered.map(p => <PropertyCard key={p.id} property={p} onOpen={onOpenProperty} compareIds={compareIds} onToggleCompare={toggleCompare} />)
       }
 
-      {/* FAB */}
-      <button onClick={() => setSheetOpen(true)} style={{ position: 'fixed', bottom: 'calc(84px + env(safe-area-inset-bottom,0px))', right: 16, width: 50, height: 50, background: 'var(--accent)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#fff', zIndex: 99, boxShadow: '0 2px 10px rgba(139,111,71,.3)' }}>
-        <i className="ti ti-plus" />
-      </button>
+
 
       {/* Quick add sheet */}
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Add property"
