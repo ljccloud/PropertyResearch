@@ -12,7 +12,7 @@ import { ComparablesMapDynamic } from '@/components/map/ComparablesMapDynamic'
 import type { Property, Comparable, PastSale } from '@/types'
 import { uid } from '@/types'
 
-interface Props { propertyId: string; onClose: () => void; asPanel?: boolean }
+interface Props { propertyId: string; onClose: () => void; asPanel?: boolean; searchBtn?: React.ReactNode }
 
 // Compact inline input for calc tables — no background, just a plain number field
 function TInput({ value, onChange, placeholder }: { value: string|number; onChange: (v: number) => void; placeholder?: string }) {
@@ -41,7 +41,7 @@ function fmtDate(d: string): string {
   return dt.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
 }
 
-export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
+export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   const { properties, pastSales, assumptions, updateProperty, archiveProperty, duplicateProperty, addPastSale, changelog } = useStore()
   const p = properties.find(x => x.id === propertyId)
 
@@ -274,13 +274,14 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--cream)', zIndex: 150, display: 'flex', flexDirection: 'column', maxWidth: 600, left: '50%', transform: 'translateX(-50%)' }}>
 
       {/* ── Top bar ── */}
-      <div style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 'max(10px,env(safe-area-inset-top,10px))' }}>
+      <div style={{ background:'var(--cream)', borderBottom:'1px solid var(--border)', padding:'0 12px', display:'flex', alignItems:'center', gap:8, flexShrink:0, height:52, paddingTop:'var(--safe-top)' }}>
         <button onClick={onClose} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)',flexShrink:0 }}>
-          <i className="ti ti-arrow-left" style={{ fontSize: 15 }} />
+          <i className="ti ti-arrow-left" style={{ fontSize:15 }} />
         </button>
-        <span style={{ fontFamily:"'DM Serif Display',serif",fontSize:15,flex:1,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis' }}>{prop.address || 'Property'}</span>
-        <div style={{ display:'flex',gap:6,flexShrink:0 }}>
+        <span style={{ fontFamily:"'DM Serif Display',serif",fontSize:16,flex:1,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis' }}>{prop.address || 'Property'}</span>
+        <div style={{ display:'flex',gap:6,alignItems:'center',flexShrink:0 }}>
           {prop.url && <button onClick={() => window.open(prop.url,'_blank')} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)' }}><i className="ti ti-external-link" /></button>}
+          {searchBtn}
           <button onClick={() => setClOpen(true)} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)' }}><i className="ti ti-history" /></button>
           <div style={{ position:'relative' }}>
             <button onClick={() => setOvfOpen(!ovfOpen)} style={{ background:'none',border:'1px solid var(--border)',borderRadius:6,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink2)' }}><i className="ti ti-dots" /></button>
@@ -308,7 +309,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
         {/* TAB 1: OVERVIEW & FINANCIALS */}
         {tab === 'overview' && (
-          <div style={{width:'100%',maxWidth:800,margin:'0 auto'}}>
+          <div style={{width:'100%',maxWidth:860,margin:'0 auto',padding:'16px 20px 80px'}}>
             {/* SUMMARY TILE */}
             <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px 12px', marginBottom: 8 }}>
               <input
@@ -728,7 +729,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
         {/* ════ TAB 2: COMPARABLES ════ */}
         {tab === 'comparables' && (
-          <div style={{width:'100%',maxWidth:800,margin:'0 auto'}}>
+          <div style={{width:'100%',maxWidth:860,margin:'0 auto',padding:'16px 20px 80px'}}>
             <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:14,padding:12,marginBottom:10}}>
               <div style={{fontSize:10,fontWeight:700,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10}}>Market summary — ticked comparables</div>
               <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:4}}>
@@ -787,7 +788,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
         {/* ════ TAB 3: SALE & RESALE ════ */}
         {tab === 'resale' && (
-          <div style={{width:'100%',maxWidth:800,margin:'0 auto'}}>
+          <div style={{width:'100%',maxWidth:860,margin:'0 auto',padding:'16px 20px 80px'}}>
             {sL('Sale details')}
             {card(<>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
