@@ -308,7 +308,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
         {/* TAB 1: OVERVIEW & FINANCIALS */}
         {tab === 'overview' && (
-          <>
+          <div style={{width:'100%',maxWidth:800,margin:'0 auto'}}>
             {/* SUMMARY TILE */}
             <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px 12px', marginBottom: 8 }}>
               <input
@@ -723,12 +723,12 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
 
             {sL('Notes')}
             <Textarea value={prop.notes||''} onChange={e=>up({notes:e.target.value})} placeholder="Add notes about this property…" style={{minHeight:100,marginBottom:16}} />
-          </>
+          </div>
         )}
 
         {/* ════ TAB 2: COMPARABLES ════ */}
         {tab === 'comparables' && (
-          <>
+          <div style={{width:'100%',maxWidth:800,margin:'0 auto'}}>
             <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:14,padding:12,marginBottom:10}}>
               <div style={{fontSize:10,fontWeight:700,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10}}>Market summary — ticked comparables</div>
               <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:4}}>
@@ -782,12 +782,12 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
                 </div>
               </div>
             ))}
-          </>
+          </div>
         )}
 
         {/* ════ TAB 3: SALE & RESALE ════ */}
         {tab === 'resale' && (
-          <>
+          <div style={{width:'100%',maxWidth:800,margin:'0 auto'}}>
             {sL('Sale details')}
             {card(<>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -823,7 +823,7 @@ export function PropertyDetail({ propertyId, onClose, asPanel }: Props) {
                     ))}
                   </>
             )}
-          </>
+          </div>
         )}
       </div>
 
