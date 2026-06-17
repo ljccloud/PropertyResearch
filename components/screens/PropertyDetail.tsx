@@ -273,7 +273,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--cream)', zIndex: 150, display: 'flex', flexDirection: 'column', maxWidth: 600, left: '50%', transform: 'translateX(-50%)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: 'var(--cream)', height: '100%' }}>
 
       {/* ── Top bar ── */}
       <div style={{ background:'var(--cream)', borderBottom:'1px solid var(--border)', padding:'0 12px', display:'flex', alignItems:'center', gap:8, flexShrink:0, height:52, paddingTop:'var(--safe-top)' }}>
@@ -307,11 +307,12 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
       </div>
 
       {/* ── Tab content ── */}
-      <div style={{ flex:1,overflowY:'auto',overflowX:'hidden',display:'flex',justifyContent:'center' }}>
+      <div style={{ flex:1,overflowY:'auto',overflowX:'hidden' }}>
+        <div style={{width:'100%',maxWidth:900,margin:'0 auto',padding:'16px 20px 90px'}}>
 
         {/* TAB 1: OVERVIEW & FINANCIALS */}
         {tab === 'overview' && (
-          <div style={{width:'100%',maxWidth:860,margin:'0 auto',padding:'16px 20px 80px'}}>
+          <>
             {/* SUMMARY TILE */}
             <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px 12px', marginBottom: 8 }}>
               <input
@@ -752,12 +753,12 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
 
             {sL('Notes')}
             <Textarea value={prop.notes||''} onChange={e=>up({notes:e.target.value})} placeholder="Add notes about this property…" style={{minHeight:100,marginBottom:16}} />
-          </div>
+          </>
         )}
 
         {/* ════ TAB 2: COMPARABLES ════ */}
         {tab === 'comparables' && (
-          <div style={{width:'100%',maxWidth:860,margin:'0 auto',padding:'16px 20px 80px'}}>
+          <>
             <div style={{background:'var(--cream2)',border:'1px solid var(--border)',borderRadius:14,padding:12,marginBottom:10}}>
               <div style={{fontSize:10,fontWeight:700,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10}}>Market summary — ticked comparables</div>
               <div style={{display:'grid',gridTemplateColumns:'68px 1fr 1fr 1fr',gap:4}}>
@@ -811,12 +812,12 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                 </div>
               </div>
             ))}
-          </div>
+          </>
         )}
 
         {/* ════ TAB 3: SALE & RESALE ════ */}
         {tab === 'resale' && (
-          <div style={{width:'100%',maxWidth:860,margin:'0 auto',padding:'16px 20px 80px'}}>
+          <>
             {sL('Sale details')}
             {card(<>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -852,8 +853,9 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                     ))}
                   </>
             )}
-          </div>
+          </>
         )}
+        </div>
       </div>
 
       {/* ════ SHEETS ════ */}

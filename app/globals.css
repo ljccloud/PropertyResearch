@@ -3,173 +3,51 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent }
 
 :root {
-  --cream: #FAF8F4;
-  --cream2: #F2EFE8;
-  --cream3: #E8E4DA;
-  --ink: #1C1A16;
-  --ink2: #5A5650;
-  --ink3: #9A9690;
-  --border: #D8D4CA;
-  --border2: #C0BBB0;
-  --accent: #8B6F47;
-  --accent2: #A67C52;
-  --green: #2D6A4F;
-  --green-bg: #E8F4EE;
-  --red: #8B2020;
-  --red-bg: #F4E8E8;
-  --amber: #7A5C00;
-  --amber-bg: #FFF8E1;
-  --blue: #1A4A7A;
-  --blue-bg: #E8F0F8;
+  --cream: #FAF8F4; --cream2: #F2EFE8; --cream3: #E8E4DA;
+  --ink: #1C1A16; --ink2: #5A5650; --ink3: #9A9690;
+  --border: #D8D4CA; --border2: #C0BBB0;
+  --accent: #8B6F47; --accent2: #A67C52;
+  --green: #2D6A4F; --green-bg: #E8F4EE;
+  --red: #8B2020; --red-bg: #F4E8E8;
+  --amber: #7A5C00; --amber-bg: #FFF8E1;
+  --blue: #1A4A7A; --blue-bg: #E8F0F8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-  --bd: var(--border);
-  --sf: #ffffff;
-  --sf2: var(--cream2);
-  --t2: var(--ink2);
-  --t3: var(--ink3);
-  --a: var(--accent);
+  --bd: var(--border); --sf: #fff; --sf2: var(--cream2);
+  --t2: var(--ink2); --t3: var(--ink3); --a: var(--accent);
 }
 
+/* Base — applied at all sizes */
 html, body {
   height: 100%;
-  overflow: hidden;
-  background: var(--cream);
   font-family: 'DM Sans', sans-serif;
   color: var(--ink);
   font-size: 14px;
+  background: var(--cream);
 }
 
-/* App root always fills the viewport */
+/* The app root fills the full viewport and contains all scrolling internally */
 #app-root {
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Main shell fills full width at all sizes */
-.app-shell {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
   background: var(--cream);
 }
 
-/* Screen content scrolls within the shell */
-.screen-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
+/* Prevent body scroll — everything scrolls inside #app-root */
+body { overflow: hidden; }
 
-/* On wider screens, constrain content width and centre it */
-@media (min-width: 768px) {
-  .screen-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .screen-inner {
-    width: 100%;
-    max-width: 860px;
-    padding: 16px 24px 100px;
-  }
-}
-
-@media (max-width: 767px) {
-  .screen-inner {
-    width: 100%;
-    padding: 12px 16px 90px;
-  }
-}
-
-/* Detail screen — always full viewport */
-.detail-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 150;
-  display: flex;
-  flex-direction: column;
-  background: var(--cream);
-}
-
-/* Detail content area — centred on wide screens */
-.detail-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.detail-inner {
-  width: 100%;
-  padding: 12px 16px 80px;
-}
-
-@media (min-width: 768px) {
-  .detail-inner {
-    max-width: 860px;
-    padding: 20px 32px 80px;
-  }
-}
-
-/* Bottom nav */
-.bottom-nav {
-  background: var(--cream);
-  border-top: 1px solid var(--border);
-  display: flex;
-  padding-bottom: calc(8px + var(--safe-bottom));
-  flex-shrink: 0;
-}
-
-/* On wider screens, centre the nav pills */
-@media (min-width: 768px) {
-  .bottom-nav {
-    justify-content: center;
-    gap: 0;
-    border-top: 1px solid var(--border);
-  }
-  .bottom-nav button {
-    max-width: 120px;
-  }
-}
-
-/* FAB */
-.fab-btn {
-  position: fixed;
-  bottom: calc(84px + var(--safe-bottom));
-  right: 24px;
-  width: 50px;
-  height: 50px;
-  background: var(--accent);
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #fff;
-  z-index: 99;
-  box-shadow: 0 2px 10px rgba(139,111,71,.3);
-}
-.fab-btn:active { background: var(--accent2); }
-
-/* Hide spinners */
+/* Spinners */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
 input[type=number] { -moz-appearance: textfield }
 
-/* Date inputs */
+/* Date/month pickers */
 input[type=date]::-webkit-calendar-picker-indicator,
 input[type=month]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; font-size: 11px }
 
-/* Leaflet z-index */
+/* Leaflet z-index containment */
 .leaflet-container { z-index: 0 !important; }
 .leaflet-pane { z-index: 0 !important; }
 .leaflet-top, .leaflet-bottom { z-index: 1 !important; }

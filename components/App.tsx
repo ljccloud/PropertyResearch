@@ -24,15 +24,12 @@ const TITLES: Record<Screen, string> = {
   compare: 'Compare', assumptions: 'Assumptions',
 }
 
-// Shared topbar used by both list and detail views
-function Topbar({ title, left, right }: { title: string; left?: React.ReactNode; right?: React.ReactNode }) {
-  return (
-    <div style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, height: 52, paddingTop: 'var(--safe-top)' }}>
-      {left}
-      <span style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, letterSpacing: '-0.01em', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
-      {right}
-    </div>
-  )
+// Responsive max-width container used by both list and detail
+const CONTENT_STYLE: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 900,
+  margin: '0 auto',
+  padding: '16px 20px 90px',
 }
 
 export function App() {
@@ -60,44 +57,45 @@ export function App() {
     </button>
   )
 
+  // The whole app is one flex column filling 100dvh
+  // Top section (topbar + content) takes flex:1 and scrolls internally
+  // Bottom nav is fixed height, always visible
   return (
-    <div id="app-root" style={{ display:'flex', flexDirection:'column', height:'100dvh', overflow:'hidden', background:'var(--cream)' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', overflow:'hidden', background:'var(--cream)' }}>
 
-      {/* ── Content area: list OR detail, never overlapping ── */}
+      {/* ── Top bar ── */}
+      {!detailId && (
+        <div style={{ background:'var(--cream)', borderBottom:'1px solid var(--border)', padding:'0 16px', height:52, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, paddingTop:'var(--safe-top)' }}>
+          <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:21, letterSpacing:'-0.01em' }}>{TITLES[screen]}</span>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <SaveIndicator />
+            {searchBtn}
+          </div>
+        </div>
+      )}
+
+      {/* ── Main content area ── fills remaining height, scrolls inside ── */}
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         {detailId ? (
-          // ── DETAIL VIEW ──
           <PropertyDetail
             propertyId={detailId}
             onClose={() => setDetailId(null)}
             searchBtn={searchBtn}
           />
         ) : (
-          // ── LIST VIEW ──
-          <>
-            <Topbar
-              title={TITLES[screen]}
-              right={
-                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                  <SaveIndicator />
-                  {searchBtn}
-                </div>
-              }
-            />
-            <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex', justifyContent:'center' }}>
-              <div style={{ width:'100%', maxWidth:860, padding:'12px 16px 90px' }}>
-                {screen === 'properties'  && <PropertiesScreen onOpenProperty={setDetailId} />}
-                {screen === 'history'     && <HistoryScreen onOpenProperty={setDetailId} />}
-                {screen === 'pastsales'   && <PastSalesScreen />}
-                {screen === 'compare'     && <CompareScreen />}
-                {screen === 'assumptions' && <AssumptionsScreen />}
-              </div>
+          <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex', justifyContent:'center' }}>
+            <div style={CONTENT_STYLE}>
+              {screen === 'properties'  && <PropertiesScreen onOpenProperty={setDetailId} />}
+              {screen === 'history'     && <HistoryScreen onOpenProperty={setDetailId} />}
+              {screen === 'pastsales'   && <PastSalesScreen />}
+              {screen === 'compare'     && <CompareScreen />}
+              {screen === 'assumptions' && <AssumptionsScreen />}
             </div>
-          </>
+          </div>
         )}
       </div>
 
-      {/* ── Bottom nav ── */}
+      {/* ── Bottom nav — always visible ── */}
       <nav style={{ background:'var(--cream)', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'center', flexShrink:0, paddingBottom:'calc(8px + var(--safe-bottom))' }}>
         {NAV.map(n => (
           <button key={n.id} onClick={() => { setDetailId(null); setScreen(n.id) }} style={{ flex:1, maxWidth:120, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0 4px', border:'none', background:'none', cursor:'pointer', position:'relative' }}>
@@ -117,7 +115,7 @@ export function App() {
         </button>
       )}
 
-      {/* ── Global search ── */}
+      {/* ── Global search overlay ── */}
       {gsOpen && (
         <div style={{ position:'fixed', inset:0, background:'var(--cream)', zIndex:300, display:'flex', flexDirection:'column' }}>
           <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8, flexShrink:0, paddingTop:'max(10px,var(--safe-top))' }}>
@@ -127,20 +125,22 @@ export function App() {
             </div>
             <button onClick={()=>setGsOpen(false)} style={{ background:'none', border:'1px solid var(--border)', borderRadius:6, padding:'7px 14px', fontSize:13, cursor:'pointer', color:'var(--ink2)', fontFamily:"'DM Sans',sans-serif" }}>Cancel</button>
           </div>
-          <div style={{ flex:1, overflowY:'auto', padding:'12px 16px', maxWidth:700, width:'100%', margin:'0 auto' }}>
-            {gsQuery && !gsResults.length && <p style={{ color:'var(--ink3)', fontSize:13, textAlign:'center', padding:24 }}>No results</p>}
-            {gsResults.map((r,i) => (
-              <div key={i} onClick={r.action} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid var(--cream2)', cursor:'pointer' }}>
-                <div style={{ width:34, height:34, background:'var(--cream2)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'var(--ink3)', flexShrink:0 }}>
-                  <i className={`ti ${r.icon}`} />
+          <div style={{ flex:1, overflowY:'auto', display:'flex', justifyContent:'center' }}>
+            <div style={{ width:'100%', maxWidth:700, padding:'12px 16px' }}>
+              {gsQuery && !gsResults.length && <p style={{ color:'var(--ink3)', fontSize:13, textAlign:'center', padding:24 }}>No results</p>}
+              {gsResults.map((r,i) => (
+                <div key={i} onClick={r.action} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid var(--cream2)', cursor:'pointer' }}>
+                  <div style={{ width:34, height:34, background:'var(--cream2)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'var(--ink3)', flexShrink:0 }}>
+                    <i className={`ti ${r.icon}`} />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.addr}</div>
+                    <div style={{ fontSize:12, color:'var(--ink3)' }}>{r.meta}</div>
+                  </div>
+                  <span style={{ fontSize:11, color:'var(--ink3)', background:'var(--cream2)', padding:'2px 8px', borderRadius:99, whiteSpace:'nowrap' }}>{r.label}</span>
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.addr}</div>
-                  <div style={{ fontSize:12, color:'var(--ink3)' }}>{r.meta}</div>
-                </div>
-                <span style={{ fontSize:11, color:'var(--ink3)', background:'var(--cream2)', padding:'2px 8px', borderRadius:99, whiteSpace:'nowrap' }}>{r.label}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
