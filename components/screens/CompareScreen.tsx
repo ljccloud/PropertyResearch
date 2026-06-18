@@ -1,7 +1,7 @@
 'use client'
 import { useStore } from '@/lib/store'
 import { gbp } from '@/lib/format'
-import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenovation } from '@/lib/calculations'
+import { calcSDLT, calcFinancing, calcLeaseExtension } from '@/lib/calculations'
 import type { Property } from '@/types'
 
 function fmtDate(d: string): string {
@@ -26,7 +26,7 @@ const TENURE_LABELS: Record<string, string> = {
 
 export function CompareScreen() {
   const { properties, compareIds, toggleCompare, assumptions } = useStore()
-  const props = properties.filter(p => compareIds.includes(p.id))
+  const props = properties.filter(p => compareIds.includes(p.id) && !p.archived && !(p as any).deleted)
 
   if (!props.length) {
     return <p style={{ textAlign: 'center', color: 'var(--ink3)', padding: 28, fontSize: 13 }}>No properties selected.<br />Tick the compare box on property cards.</p>
@@ -40,8 +40,15 @@ export function CompareScreen() {
     const sc = Math.round(p.offerPrice * (scPct / 100) * 1.2) // +VAT
     const legal = p.purchaseFees?.legalFees ?? assumptions.defLegal
     const totalFees = sdlt.total + auctionFee + sc + legal
-    const renoBase = Object.entries(p.renovation || {}).reduce((s, [k, v]) => k !== 'extra' ? s + (Number(v) || 0) : s, 0)
-    const { withVat: reno } = calcRenovation({ total: renoBase }, assumptions.vatRate, false)
+    const renoFields = p.renovation || {}
+    const renoBase = Object.entries(renoFields).reduce((s, [k, v]) => {
+      if (k === 'extra') return s
+      return s + (Number(v) || 0)
+    }, 0)
+    const renoExtras = (renoFields as any).extra || []
+    const renoExtraTotal = renoExtras.reduce((s: number, r: any) => s + (parseFloat(r.value) || 0), 0)
+    const renoTotal = renoBase + renoExtraTotal
+    const reno = renoTotal
     const lease = calcLeaseExtension(p.leaseExtension?.cost || 0, p.leaseExtension?.legal || 0)
     const sub = p.offerPrice + totalFees + reno
     const totalCost = sub + lease.total

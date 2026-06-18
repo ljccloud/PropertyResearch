@@ -66,9 +66,8 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   const [pendingArchiveReason, setPendingArchiveReason] = useState('')
   // extraRenoRows are stored in prop.renovation.extra — no local state needed
   // extraPFRows stored in prop.purchaseFees.extraItems — no local state needed
-  const [renoVat, setRenoVat] = useState(false)
+  // renoVat and loanOverride stored on property so they persist
   // Track whether loan has been manually overridden
-  const [loanOverride, setLoanOverride] = useState(false)
 
   // Collect previously used tags for autocomplete
   const allUsedTags = Array.from(new Set(
@@ -78,6 +77,8 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   if (!p) return null
   const prop = p as Property
   const up = (patch: Partial<Property>) => updateProperty(propertyId, patch)
+  const renoVat = prop.renoVatIncluded || false
+  const loanOverride = prop.loanOverride || false
 
   // ── Sq ft / sq m auto-conversion ──────────────────────────────
   function onSqftChange(val: number) {
@@ -656,7 +657,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                 subtotalRow('Total estimate', gbp(renoBase)),
                 row(
                   <label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,cursor:'pointer'}}>
-                    <input type="checkbox" checked={renoVat} onChange={e=>setRenoVat(e.target.checked)} />
+                    <input type="checkbox" checked={renoVat} onChange={e=>up({renoVatIncluded:e.target.checked})} />
                     Incl. VAT ({assumptions.vatRate}%)
                   </label>,
                   renoVat ? <Val>{gbp(renoTotal)}</Val> : <span style={{color:'var(--ink3)'}}>—</span>
@@ -687,13 +688,13 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                   <span style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                     Loan amount
                     {loanOverride
-                      ? <span onClick={()=>{setLoanOverride(false);up({financing:{...prop.financing,loan:autoLoan}})}} style={{fontSize:10,color:'var(--accent)',cursor:'pointer',textDecoration:'underline'}}>reset to auto</span>
+                      ? <span onClick={()=>{up({loanOverride:false,financing:{...prop.financing,loan:autoLoan}})}} style={{fontSize:10,color:'var(--accent)',cursor:'pointer',textDecoration:'underline'}}>reset to auto</span>
                       : <span style={{fontSize:10,color:'var(--ink3)'}}>= total cost</span>
                     }
                   </span>,
                   <TInput
                     value={loanOverride ? (prop.financing?.loan||'') : autoLoan}
-                    onChange={v=>{setLoanOverride(true);up({financing:{...prop.financing,loan:v}})}}
+                    onChange={v=>{up({loanOverride:true,financing:{...prop.financing,loan:v}})}}
                   />,
                   true
                 ),

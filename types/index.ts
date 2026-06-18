@@ -87,6 +87,8 @@ export interface Property {
   archivedDate: string
   // Optional extras
   leaseYears?: number
+  renoVatIncluded?: boolean
+  loanOverride?: boolean
   tenure?: 'freehold' | 'leasehold' | 'share-of-freehold' | ''
   serviceCharge?: number
   methodOfSale?: 'private-treaty' | 'auction' | ''
@@ -167,7 +169,7 @@ export function newProperty(): Property {
     offerPrice: 0, resaleEst: 0, rent: 0, runningCosts: 0,
     renovation: { paint:0, kitchen:0, bathroom:0, electrics:0, boiler:0, windows:0, builder:0, extra:[] },
     financing: { loan: 0, rate: 6.5, months: 6 },
-    leaseExtension: { cost: 0, legal: 1500 },
+    leaseExtension: { cost: 0, legal: 0 },
     purchaseFees: { specialConditionsPct: 0, extraItems: [] },
     priceHistory: [],
     comparables: { forsale: [], sold: [], auction: [] },
