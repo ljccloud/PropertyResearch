@@ -212,3 +212,30 @@ export function calcSensitivity(
     return { delta, profit: Math.round(profit) }
   })
 }
+
+// ─── Shared renovation total (used by both PropertyDetail and CompareScreen) ───
+
+export interface RenoFields {
+  paint?: number; kitchen?: number; bathroom?: number; electrics?: number
+  boiler?: number; windows?: number; builder?: number
+  extra?: { id: string; label: string; value: string }[]
+  [key: string]: any
+}
+
+export function calcRenoTotal(
+  renovation: RenoFields | undefined,
+  vatRate: number,
+  inclVat: boolean,
+): { subtotal: number; total: number } {
+  if (!renovation) return { subtotal: 0, total: 0 }
+  const base = Object.entries(renovation).reduce((s, [k, v]) => {
+    if (k === 'extra') return s
+    return s + (Number(v) || 0)
+  }, 0)
+  const extras = (renovation.extra || []).reduce(
+    (s, r) => s + (parseFloat(r.value) || 0), 0
+  )
+  const subtotal = Math.round(base + extras)
+  const total = inclVat ? Math.round(subtotal * (1 + vatRate / 100)) : subtotal
+  return { subtotal, total }
+}

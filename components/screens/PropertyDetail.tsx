@@ -2,7 +2,7 @@
 import { useState, Fragment } from 'react'
 import { useStore } from '@/lib/store'
 import { gbp, pct, ppsf, ppsm } from '@/lib/format'
-import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenovation, calcYield } from '@/lib/calculations'
+import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenoTotal, calcYield } from '@/lib/calculations'
 import { Sheet } from '@/components/ui/Sheet'
 import { Btn } from '@/components/ui/Btn'
 import { Collapsible } from '@/components/ui/Collapsible'
@@ -19,9 +19,14 @@ function TInput({ value, onChange, placeholder }: { value: string|number; onChan
   return (
     <input
       type="number"
-      value={value === 0 ? '' : value}
+      value={value === 0 || value === '0' ? '' : value}
       placeholder={placeholder || '0'}
-      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      onChange={e => {
+        const raw = e.target.value
+        if (raw === '' || raw === '-') { onChange(0); return }
+        const n = parseFloat(raw)
+        if (!isNaN(n)) onChange(n)
+      }}
       style={{ width: 90, textAlign: 'right', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 4, padding: '3px 6px', fontSize: 12, fontFamily: "'DM Sans',sans-serif", outline: 'none', color: 'var(--ink)' }}
     />
   )
@@ -103,10 +108,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   const totalFees = sdlt.total + otherFees
 
   const renoExtra: {id:string;label:string;value:string}[] = (prop.renovation as any)?.extra || []
-  const renoBase = Object.entries(prop.renovation || {})
-    .reduce((s, [k, v]) => k !== 'extra' ? s + (Number(v) || 0) : s, 0)
-    + renoExtra.reduce((s: number, r: any) => s + (parseFloat(r.value) || 0), 0)
-  const { withVat: renoTotal } = calcRenovation({ total: renoBase }, assumptions.vatRate, renoVat)
+  const { subtotal: renoBase, total: renoTotal } = calcRenoTotal(prop.renovation as any, assumptions.vatRate, renoVat)
 
   const lease = calcLeaseExtension(prop.leaseExtension?.cost || 0, prop.leaseExtension?.legal || 0)
   const sub = prop.offerPrice + totalFees + renoTotal

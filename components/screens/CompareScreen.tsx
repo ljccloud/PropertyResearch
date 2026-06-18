@@ -1,7 +1,7 @@
 'use client'
 import { useStore } from '@/lib/store'
 import { gbp } from '@/lib/format'
-import { calcSDLT, calcFinancing, calcLeaseExtension } from '@/lib/calculations'
+import { calcSDLT, calcFinancing, calcLeaseExtension, calcRenoTotal } from '@/lib/calculations'
 import type { Property } from '@/types'
 
 function fmtDate(d: string): string {
@@ -40,19 +40,14 @@ export function CompareScreen() {
     const sc = Math.round(p.offerPrice * (scPct / 100) * 1.2) // +VAT
     const legal = p.purchaseFees?.legalFees ?? assumptions.defLegal
     const totalFees = sdlt.total + auctionFee + sc + legal
-    const renoFields = p.renovation || {}
-    const renoBase = Object.entries(renoFields).reduce((s, [k, v]) => {
-      if (k === 'extra') return s
-      return s + (Number(v) || 0)
-    }, 0)
-    const renoExtras = (renoFields as any).extra || []
-    const renoExtraTotal = renoExtras.reduce((s: number, r: any) => s + (parseFloat(r.value) || 0), 0)
-    const renoTotal = renoBase + renoExtraTotal
-    const reno = renoTotal
+    const vatIncluded = (p as any).renoVatIncluded || false
+    const { total: reno } = calcRenoTotal(p.renovation as any, assumptions.vatRate, vatIncluded)
     const lease = calcLeaseExtension(p.leaseExtension?.cost || 0, p.leaseExtension?.legal || 0)
     const sub = p.offerPrice + totalFees + reno
     const totalCost = sub + lease.total
-    const fin = calcFinancing(totalCost, p.financing?.rate || assumptions.defRate, p.financing?.months || 6)
+    // Use stored loan if overridden, otherwise auto = totalCost
+    const loanAmt = (p as any).loanOverride ? (p.financing?.loan || 0) : totalCost
+    const fin = calcFinancing(loanAmt, p.financing?.rate || assumptions.defRate, p.financing?.months || 6)
     const profit = p.resaleEst ? p.resaleEst - totalCost : 0
     return { totalFees, reno, totalCost, fin, profit }
   }
