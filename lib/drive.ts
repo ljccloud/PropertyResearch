@@ -14,27 +14,72 @@ import { DEFAULT_STATE } from '@/types'
 const FILE_NAME = 'property-tracker.json'
 const MIME_JSON = 'application/json'
 
-// ─── OAuth2 client ─────────────────────────────────────────────
-// Credentials come from environment variables (see .env.local.example)
+// ─── Token types ───────────────────────────────────────────────
 
-function getOAuth2Client(accessToken: string) {
+export interface StoredTokens {
+  access_token: string
+  refresh_token?: string
+  expiry_date?: number
+}
+
+// ─── OAuth2 client ─────────────────────────────────────────────
+
+function getOAuth2Client(tokens: StoredTokens) {
   const client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URI,
   )
-  client.setCredentials({ access_token: accessToken })
+  client.setCredentials(tokens)
   return client
 }
 
-function getDrive(accessToken: string) {
-  return google.drive({ version: 'v3', auth: getOAuth2Client(accessToken) })
+function getDrive(tokens: StoredTokens) {
+  return google.drive({ version: 'v3', auth: getOAuth2Client(tokens) })
+}
+
+// ─── Token refresh ─────────────────────────────────────────────
+
+/**
+ * Returns valid tokens, refreshing via the refresh_token if the
+ * access_token has expired (or will expire in the next 60 seconds).
+ *
+ * Also returns `refreshedTokens` when a new access_token was issued
+ * so the caller can update the cookie.
+ */
+export async function ensureFreshTokens(stored: StoredTokens): Promise<{
+  tokens: StoredTokens
+  refreshedTokens: StoredTokens | null
+}> {
+  const bufferMs = 60 * 1000 // refresh if <60s left
+  const isExpired =
+    stored.expiry_date && Date.now() > stored.expiry_date - bufferMs
+
+  if (!isExpired) {
+    return { tokens: stored, refreshedTokens: null }
+  }
+
+  if (!stored.refresh_token) {
+    // No refresh token available — caller will need to re-authenticate
+    throw new Error('access_token expired and no refresh_token available')
+  }
+
+  const client = getOAuth2Client(stored)
+  const { credentials } = await client.refreshAccessToken()
+
+  const refreshed: StoredTokens = {
+    access_token: credentials.access_token!,
+    refresh_token: credentials.refresh_token ?? stored.refresh_token,
+    expiry_date: credentials.expiry_date ?? undefined,
+  }
+
+  return { tokens: refreshed, refreshedTokens: refreshed }
 }
 
 // ─── Find or create the data file ─────────────────────────────
 
-async function findFileId(accessToken: string): Promise<string | null> {
-  const drive = getDrive(accessToken)
+async function findFileId(tokens: StoredTokens): Promise<string | null> {
+  const drive = getDrive(tokens)
   const res = await drive.files.list({
     q: `name='${FILE_NAME}' and trashed=false`,
     fields: 'files(id, name)',
@@ -43,8 +88,8 @@ async function findFileId(accessToken: string): Promise<string | null> {
   return res.data.files?.[0]?.id ?? null
 }
 
-async function createFile(accessToken: string, state: AppState): Promise<string> {
-  const drive = getDrive(accessToken)
+async function createFile(tokens: StoredTokens, state: AppState): Promise<string> {
+  const drive = getDrive(tokens)
   const res = await drive.files.create({
     requestBody: { name: FILE_NAME, mimeType: MIME_JSON },
     media: { mimeType: MIME_JSON, body: JSON.stringify(state, null, 2) },
@@ -58,14 +103,18 @@ async function createFile(accessToken: string, state: AppState): Promise<string>
 /**
  * Load app state from Drive.
  * Returns DEFAULT_STATE if no file exists yet (first run).
+ * Also returns any refreshed tokens so the caller can update the cookie.
  */
-export async function loadFromDrive(accessToken: string): Promise<AppState> {
-  const drive = getDrive(accessToken)
-  const fileId = await findFileId(accessToken)
+export async function loadFromDrive(stored: StoredTokens): Promise<{
+  state: AppState
+  refreshedTokens: StoredTokens | null
+}> {
+  const { tokens, refreshedTokens } = await ensureFreshTokens(stored)
+  const drive = getDrive(tokens)
+  const fileId = await findFileId(tokens)
 
   if (!fileId) {
-    // First run — return defaults; file will be created on first save
-    return DEFAULT_STATE
+    return { state: DEFAULT_STATE, refreshedTokens }
   }
 
   const res = await drive.files.get(
@@ -73,14 +122,13 @@ export async function loadFromDrive(accessToken: string): Promise<AppState> {
     { responseType: 'stream' },
   )
 
-  return new Promise((resolve, reject) => {
+  const state = await new Promise<AppState>((resolve, reject) => {
     let raw = ''
     const stream = res.data as NodeJS.ReadableStream
     stream.on('data', (chunk: Buffer) => { raw += chunk.toString() })
     stream.on('end', () => {
       try {
         const parsed = JSON.parse(raw) as AppState
-        // Merge with defaults to handle schema additions across versions
         resolve({ ...DEFAULT_STATE, ...parsed })
       } catch {
         resolve(DEFAULT_STATE)
@@ -88,39 +136,46 @@ export async function loadFromDrive(accessToken: string): Promise<AppState> {
     })
     stream.on('error', reject)
   })
+
+  return { state, refreshedTokens }
 }
 
 /**
  * Save app state to Drive.
  * Creates the file if it doesn't exist; updates it if it does.
  * Always stamps lastSaved before writing.
+ * Also returns any refreshed tokens so the caller can update the cookie.
  */
 export async function saveToDrive(
-  accessToken: string,
+  stored: StoredTokens,
   state: AppState,
-): Promise<void> {
-  const drive = getDrive(accessToken)
+): Promise<{ refreshedTokens: StoredTokens | null }> {
+  const { tokens, refreshedTokens } = await ensureFreshTokens(stored)
+  const drive = getDrive(tokens)
   const stamped: AppState = { ...state, lastSaved: new Date().toISOString() }
   const body = JSON.stringify(stamped, null, 2)
 
-  const fileId = await findFileId(accessToken)
+  const fileId = await findFileId(tokens)
 
   if (!fileId) {
-    await createFile(accessToken, stamped)
-    return
+    await createFile(tokens, stamped)
+    return { refreshedTokens }
   }
 
   await drive.files.update({
     fileId,
     media: { mimeType: MIME_JSON, body },
   })
+
+  return { refreshedTokens }
 }
 
 /**
  * Delete the data file (used for full reset / testing).
  */
-export async function deleteFile(accessToken: string): Promise<void> {
-  const drive = getDrive(accessToken)
-  const fileId = await findFileId(accessToken)
+export async function deleteFile(stored: StoredTokens): Promise<void> {
+  const { tokens } = await ensureFreshTokens(stored)
+  const drive = getDrive(tokens)
+  const fileId = await findFileId(tokens)
   if (fileId) await drive.files.delete({ fileId })
 }

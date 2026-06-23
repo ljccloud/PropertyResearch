@@ -16,6 +16,7 @@
 import { google } from 'googleapis'
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import type { StoredTokens } from '@/lib/drive'
 
 function getClient() {
   return new google.auth.OAuth2(
@@ -29,7 +30,6 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
   const error = req.nextUrl.searchParams.get('error')
 
-  // Google returned an error (e.g. user denied, wrong account)
   if (error) {
     const messages: Record<string, string> = {
       access_denied: 'This Google account is not authorised. Make sure you are signing in with an account added as a Test User in Google Cloud Console.',
@@ -47,9 +47,17 @@ export async function GET(req: NextRequest) {
     const client = getClient()
     const { tokens } = await client.getToken(code)
 
-    // Store tokens in httpOnly cookie — not accessible to JavaScript
+    // Store access_token, refresh_token, and expiry_date.
+    // expiry_date lets us detect expiry proactively and refresh before Drive
+    // calls fail. refresh_token is long-lived and allows silent re-auth.
+    const stored: StoredTokens = {
+      access_token: tokens.access_token!,
+      refresh_token: tokens.refresh_token ?? undefined,
+      expiry_date: tokens.expiry_date ?? undefined,
+    }
+
     const cookieStore = cookies()
-    cookieStore.set('drive_tokens', JSON.stringify(tokens), {
+    cookieStore.set('drive_tokens', JSON.stringify(stored), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

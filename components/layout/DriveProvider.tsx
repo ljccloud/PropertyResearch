@@ -53,6 +53,14 @@ export function DriveProvider({ children }: { children: React.ReactNode }) {
 
         setStatus('loading')
         const loadRes = await fetch('/api/drive/load')
+
+        // 401 means the session expired and the refresh token was missing —
+        // show the reconnect screen rather than a generic error
+        if (loadRes.status === 401) {
+          setStatus('unauthenticated')
+          return
+        }
+
         if (!loadRes.ok) throw new Error('Failed to load data from Drive')
         const state: AppState = await loadRes.json()
         hydrate(state)
