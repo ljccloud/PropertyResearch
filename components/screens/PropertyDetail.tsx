@@ -817,7 +817,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
             {[{type:'forsale' as const,label:'For sale',dateLabel:'Listed'},{type:'sold' as const,label:'Sold',dateLabel:'Sold'},{type:'auction' as const,label:'Sold at auction',dateLabel:'Sold'}].map(({type,label,dateLabel})=>(
               <div key={type}>
                 {sL(label)}
-                <CompTable type={type} dateLabel={dateLabel} />
+                {CompTable({ type, dateLabel })}
                 <div style={{display:'flex',gap:8,marginBottom:12}}>
                   <button onClick={()=>{setCompType(type);setAddCompOpen(true)}} style={{flex:1,fontSize:12,background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',cursor:'pointer',color:'var(--ink2)',fontFamily:"'DM Sans',sans-serif",display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
                     <i className="ti ti-plus" style={{fontSize:11}} /> Add
