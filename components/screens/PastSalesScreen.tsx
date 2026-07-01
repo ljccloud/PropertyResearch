@@ -278,8 +278,8 @@ export function PastSalesScreen() {
               <FormRow label="Guide / list price"><Input type="number" value={editForm.guide ?? ''} onChange={e => setEditForm(s => ({ ...s, guide: parseFloat(e.target.value) || 0 }))} /></FormRow>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
-              {mInput('Date listed', editForm.dateListed?.slice(0,7) ?? '', v => setEditForm(s => ({ ...s, dateListed: v ? v + '-01' : '' })))}
-              {mInput('Date sold', editForm.dateSold?.slice(0,7) ?? '', v => setEditForm(s => ({ ...s, dateSold: v ? v + '-01' : '' })))}
+              {mInput('Date listed', 'edit-dlisted', editForm.dateListed?.slice(0,7) ?? '', v => setEditForm(s => ({ ...s, dateListed: v ? v + '-01' : '' })))}
+              {mInput('Date sold', 'edit-dsold', editForm.dateSold?.slice(0,7) ?? '', v => setEditForm(s => ({ ...s, dateSold: v ? v + '-01' : '' })))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
               <FormRow label="Sold price"><Input type="number" value={editForm.soldPrice ?? ''} onChange={e => setEditForm(s => ({ ...s, soldPrice: parseFloat(e.target.value) || 0 }))} /></FormRow>
