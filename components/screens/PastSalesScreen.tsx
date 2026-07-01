@@ -28,6 +28,8 @@ export function PastSalesScreen() {
   const [addOpen, setAddOpen] = useState(false)
   const [detailSale, setDetailSale] = useState<PastSale | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState(false)
+  const [editForm, setEditForm] = useState<Partial<PastSale>>({})
   const [form, setForm] = useState({
     address: '', postcode: '', guide: '', dateListed: '', dateSold: '',
     soldPrice: '', sqft: '', sqm: '', beds: '', outdoor: '', notes: '', auction: false,
@@ -190,16 +192,45 @@ export function PastSalesScreen() {
       </Sheet>
 
       {/* Detail sheet */}
-      <Sheet open={!!detailSale} onClose={() => setDetailSale(null)} title="Sale details"
+      <Sheet open={!!detailSale} onClose={() => { setDetailSale(null); setEditMode(false) }} title={editMode ? 'Edit sale' : 'Sale details'}
         footer={
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-            <Btn onClick={() => setDetailSale(null)}>Close</Btn>
-            <Btn variant="danger" full onClick={() => { if (detailSale) { setConfirmDeleteId(detailSale.id); setDetailSale(null) } }}>
-              <i className="ti ti-trash" style={{ fontSize: 13 }} /> Delete
-            </Btn>
-          </div>
+          editMode ? (
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <Btn onClick={() => setEditMode(false)}>Cancel</Btn>
+              <Btn variant="primary" full onClick={() => {
+                if (detailSale) {
+                  updatePastSale(detailSale.id, {
+                    address: editForm.address ?? detailSale.address,
+                    postcode: editForm.postcode ?? detailSale.postcode,
+                    guide: editForm.guide ?? detailSale.guide,
+                    dateListed: editForm.dateListed ?? detailSale.dateListed,
+                    dateSold: editForm.dateSold ?? detailSale.dateSold,
+                    soldPrice: editForm.soldPrice ?? detailSale.soldPrice,
+                    sqft: editForm.sqft ?? detailSale.sqft,
+                    sqm: editForm.sqm ?? detailSale.sqm,
+                    beds: editForm.beds ?? detailSale.beds,
+                    outdoor: editForm.outdoor ?? detailSale.outdoor,
+                    notes: editForm.notes ?? detailSale.notes,
+                    auction: editForm.auction ?? detailSale.auction,
+                  })
+                  setDetailSale({ ...detailSale, ...editForm } as PastSale)
+                  setEditMode(false)
+                }
+              }}>Save</Btn>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <Btn onClick={() => { setDetailSale(null); setEditMode(false) }}>Close</Btn>
+              <Btn onClick={() => { setEditForm({ ...detailSale! }); setEditMode(true) }} style={{ flexShrink: 0 }}>
+                <i className="ti ti-pencil" style={{ fontSize: 13 }} /> Edit
+              </Btn>
+              <Btn variant="danger" full onClick={() => { if (detailSale) { setConfirmDeleteId(detailSale.id); setDetailSale(null) } }}>
+                <i className="ti ti-trash" style={{ fontSize: 13 }} /> Delete
+              </Btn>
+            </div>
+          )
         }>
-        {detailSale && (() => {
+        {detailSale && !editMode && (() => {
           const s = detailSale
           const psfVal = s.sqft ? Math.round(s.soldPrice / s.sqft) : 0
           const above = pctAbove(s.soldPrice, s.guide)
@@ -217,24 +248,68 @@ export function PastSalesScreen() {
             ['Bedrooms', s.beds ? String(s.beds) : '—'],
             ['Outdoor', s.outdoor || '—'],
             ['Auction', s.auction ? '☑ Yes' : '☐ No'],
-            ...(s.notes ? [['Notes', s.notes] as [string, string]] : []),
           ]
           return (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <tbody>
-                {rows.map(([label, value]) => (
-                  <tr key={label}>
-                    <td style={{ padding: '6px 4px', borderBottom: '1px solid var(--cream2)', color: 'var(--ink3)', width: '40%' }}>{label}</td>
-                    <td style={{ padding: '6px 4px', borderBottom: '1px solid var(--cream2)', fontWeight: 500, textAlign: 'right' }}>{value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: s.notes ? 12 : 0 }}>
+                <tbody>
+                  {rows.map(([label, value]) => (
+                    <tr key={label}>
+                      <td style={{ padding: '6px 4px', borderBottom: '1px solid var(--cream2)', color: 'var(--ink3)', width: '40%' }}>{label}</td>
+                      <td style={{ padding: '6px 4px', borderBottom: '1px solid var(--cream2)', fontWeight: 500, textAlign: 'right' }}>{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {s.notes && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>Notes</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, background: 'var(--cream)', borderRadius: 8, padding: '8px 10px' }}>{s.notes}</div>
+                </div>
+              )}
+            </>
           )
         })()}
+        {detailSale && editMode && (
+          <>
+            <FormRow label="Address"><Input value={editForm.address ?? ''} onChange={e => setEditForm(s => ({ ...s, address: e.target.value }))} /></FormRow>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
+              <FormRow label="Postcode"><Input value={editForm.postcode ?? ''} onChange={e => setEditForm(s => ({ ...s, postcode: e.target.value }))} /></FormRow>
+              <FormRow label="Guide / list price"><Input type="number" value={editForm.guide ?? ''} onChange={e => setEditForm(s => ({ ...s, guide: parseFloat(e.target.value) || 0 }))} /></FormRow>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
+              {mInput('Date listed', editForm.dateListed?.slice(0,7) ?? '', v => setEditForm(s => ({ ...s, dateListed: v ? v + '-01' : '' })))}
+              {mInput('Date sold', editForm.dateSold?.slice(0,7) ?? '', v => setEditForm(s => ({ ...s, dateSold: v ? v + '-01' : '' })))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
+              <FormRow label="Sold price"><Input type="number" value={editForm.soldPrice ?? ''} onChange={e => setEditForm(s => ({ ...s, soldPrice: parseFloat(e.target.value) || 0 }))} /></FormRow>
+              <FormRow label="Sq ft"><Input type="number" value={editForm.sqft ?? ''} onChange={e => setEditForm(s => ({ ...s, sqft: parseFloat(e.target.value) || 0 }))} /></FormRow>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
+              <FormRow label="Sq m"><Input type="number" value={editForm.sqm ?? ''} onChange={e => setEditForm(s => ({ ...s, sqm: parseFloat(e.target.value) || 0 }))} /></FormRow>
+              <FormRow label="Bedrooms"><Input type="number" value={editForm.beds ?? ''} onChange={e => setEditForm(s => ({ ...s, beds: parseFloat(e.target.value) || 0 }))} /></FormRow>
+            </div>
+            <FormRow label="Outdoor space">
+              <select value={editForm.outdoor ?? ''} onChange={e => setEditForm(s => ({ ...s, outdoor: e.target.value }))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:editForm.outdoor?'var(--ink)':'var(--ink3)'}}>
+                <option value="">Select...</option>
+                <option value="none">None</option>
+                <option value="shared-garden">Shared garden</option>
+                <option value="garden">Garden</option>
+                <option value="balcony">Balcony</option>
+                <option value="terrace">Terrace</option>
+                <option value="roof-terrace">Roof terrace</option>
+              </select>
+            </FormRow>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
+              <input type="checkbox" id="edit-auction" checked={editForm.auction ?? false} onChange={e => setEditForm(s => ({ ...s, auction: e.target.checked }))} />
+              <label htmlFor="edit-auction" style={{ fontSize: 13, cursor: 'pointer' }}>Sold at auction</label>
+            </div>
+            <FormRow label="Notes"><Textarea value={editForm.notes ?? ''} onChange={e => setEditForm(s => ({ ...s, notes: e.target.value }))} style={{ minHeight: 80 }} /></FormRow>
+          </>
+        )}
       </Sheet>
 
-      {/* Confirm delete sheet */}
+            {/* Confirm delete sheet */}
       <Sheet open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)} title="Delete entry"
         footer={<>
           <Btn onClick={() => setConfirmDeleteId(null)}>Cancel</Btn>

@@ -33,9 +33,17 @@ export interface Comparable {
   postcode: string
   price: number
   date: string
+  dateListed?: string
   sqft: number
+  sqm?: number
   psf?: number
   ticked: boolean
+  beds?: number
+  baths?: number
+  tenure?: string
+  outdoorSpace?: string
+  guidePrice?: number
+  notes?: string
 }
 
 export interface Comparables {

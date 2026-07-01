@@ -61,7 +61,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   const [phPrice, setPhPrice] = useState('')
   const [addCompOpen, setAddCompOpen] = useState(false)
   const [compType, setCompType] = useState<'forsale'|'sold'|'auction'>('sold')
-  const [compForm, setCompForm] = useState({ address: '', postcode: '', price: '', date: '', sqft: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '' })
+  const [compForm, setCompForm] = useState({ address: '', postcode: '', price: '', date: '', dateListed: '', sqft: '', sqm: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '', notes: '' })
   const [compDateFilter, setCompDateFilter] = useState<'all'|'12'|'24'>('all')
   const [importPSOpen, setImportPSOpen] = useState(false)
   const [importPSType, setImportPSType] = useState<'forsale'|'sold'|'auction'>('sold')
@@ -160,31 +160,44 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
   function addComp() {
     const c: Comparable = {
       id: uid(), address: compForm.address, postcode: compForm.postcode,
-      price: parseFloat(compForm.price)||0, date: compForm.date ? compForm.date + '-01' : '',
-      sqft: parseFloat(compForm.sqft)||0, ticked: false,
+      price: parseFloat(compForm.price)||0,
+      date: compForm.date ? compForm.date + '-01' : '',
+      dateListed: compForm.dateListed ? compForm.dateListed + '-01' : '',
+      sqft: parseFloat(compForm.sqft)||0,
+      sqm: parseFloat(compForm.sqm)||undefined,
+      ticked: false,
       beds: parseFloat(compForm.beds)||undefined,
       baths: parseFloat(compForm.baths)||undefined,
       tenure: compForm.tenure as any,
       outdoorSpace: compForm.outdoorSpace as any,
       guidePrice: parseFloat(compForm.guidePrice)||undefined,
+      notes: compForm.notes || undefined,
     } as any
     if (c.sqft) c.psf = Math.round(c.price / c.sqft)
     const comps = { ...prop.comparables, [compType]: [...(prop.comparables?.[compType]||[]), c] }
     up({ comparables: comps })
-    // Also add to past sales
-    const alreadyInSales = pastSales.some(s => s.id === c.id)
-    if (!alreadyInSales) {
-      const sale: PastSale = {
-        id: c.id, address: c.address, postcode: c.postcode,
-        guide: parseFloat(compForm.guidePrice)||0, dateListed: '', dateSold: c.date,
-        soldPrice: c.price, sqft: c.sqft, sqm: 0,
-        beds: parseFloat(compForm.beds)||0, outdoor: compForm.outdoorSpace || '',
-        notes: '', auction: compType === 'auction',
+    // Also add to past sales if it is a sold/auction comparable
+    if (compType === 'sold' || compType === 'auction') {
+      const alreadyInSales = pastSales.some(s => s.id === c.id)
+      if (!alreadyInSales) {
+        const sale: PastSale = {
+          id: c.id, address: c.address, postcode: c.postcode,
+          guide: parseFloat(compForm.guidePrice)||0,
+          dateListed: c.dateListed || '',
+          dateSold: c.date,
+          soldPrice: c.price,
+          sqft: c.sqft,
+          sqm: parseFloat(compForm.sqm)||0,
+          beds: parseFloat(compForm.beds)||0,
+          outdoor: compForm.outdoorSpace || '',
+          notes: compForm.notes || '',
+          auction: compType === 'auction',
+        }
+        addPastSale(sale)
       }
-      addPastSale(sale)
     }
     setAddCompOpen(false)
-    setCompForm({ address: '', postcode: '', price: '', date: '', sqft: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '' })
+    setCompForm({ address: '', postcode: '', price: '', date: '', dateListed: '', sqft: '', sqm: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '', notes: '' })
   }
 
   function tickComp(type: 'forsale'|'sold'|'auction', idx: number) {
@@ -913,46 +926,56 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
           <FormRow label="Postcode"><Input value={compForm.postcode} onChange={e=>setCompForm(s=>({...s,postcode:e.target.value}))} /></FormRow>
           <FormRow label={compType==='forsale'?'Asking price':'Sold price'}><Input type="number" value={compForm.price} onChange={e=>setCompForm(s=>({...s,price:e.target.value}))} /></FormRow>
         </div>
-        {compType==='auction' && (
-          <FormRow label="Guide price"><Input type="number" value={compForm.guidePrice} onChange={e=>setCompForm(s=>({...s,guidePrice:e.target.value}))} /></FormRow>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
+          <FormRow label="Guide / list price"><Input type="number" value={compForm.guidePrice} onChange={e=>setCompForm(s=>({...s,guidePrice:e.target.value}))} /></FormRow>
+          <FormRow label="Bedrooms"><Input type="number" value={compForm.beds} onChange={e=>setCompForm(s=>({...s,beds:e.target.value}))} /></FormRow>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
+          <FormRow label="Date listed">
+            <input type="month" value={compForm.dateListed} onChange={e=>setCompForm(s=>({...s,dateListed:e.target.value}))}
+              style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none'}} />
+          </FormRow>
+          {(compType==='sold'||compType==='auction') ? (
+            <FormRow label="Month / year sold">
+              <input type="month" value={compForm.date} onChange={e=>setCompForm(s=>({...s,date:e.target.value}))}
+                style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none'}} />
+            </FormRow>
+          ) : (
+            <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
+          )}
+        </div>
+        {(compType==='sold'||compType==='auction') && (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
+            <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
+            <FormRow label="Sq m"><Input type="number" value={compForm.sqm} onChange={e=>setCompForm(s=>({...s,sqm:e.target.value}))} /></FormRow>
+          </div>
         )}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
-          <FormRow label={compType==='forsale'?'Date listed':'Month/year sold'}>
-            <input type="month" value={compForm.date} onChange={e=>setCompForm(s=>({...s,date:e.target.value}))}
-              style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,color:compForm.date?'var(--ink)':'var(--ink3)',outline:'none',WebkitAppearance:'none',appearance:'none'}} />
+          <FormRow label="Baths"><Input type="number" value={compForm.baths} onChange={e=>setCompForm(s=>({...s,baths:e.target.value}))} /></FormRow>
+          <FormRow label="Tenure">
+            <select value={compForm.tenure} onChange={e=>setCompForm(s=>({...s,tenure:e.target.value}))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:compForm.tenure?'var(--ink)':'var(--ink3)'}}>
+              <option value="">Select...</option>
+              <option value="freehold">Freehold</option>
+              <option value="leasehold">Leasehold</option>
+              <option value="share-of-freehold">Share of freehold</option>
+            </select>
           </FormRow>
-          <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
         </div>
-        {(compType==='sold'||compType==='auction') && (<>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
-            <FormRow label="Beds"><Input type="number" value={compForm.beds} onChange={e=>setCompForm(s=>({...s,beds:e.target.value}))} /></FormRow>
-            <FormRow label="Baths"><Input type="number" value={compForm.baths} onChange={e=>setCompForm(s=>({...s,baths:e.target.value}))} /></FormRow>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <FormRow label="Tenure">
-              <select value={compForm.tenure} onChange={e=>setCompForm(s=>({...s,tenure:e.target.value}))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:compForm.tenure?'var(--ink)':'var(--ink3)'}}>
-                <option value="">Select...</option>
-                <option value="freehold">Freehold</option>
-                <option value="leasehold">Leasehold</option>
-                <option value="share-of-freehold">Share of freehold</option>
-              </select>
-            </FormRow>
-            <FormRow label="Outdoor">
-              <select value={compForm.outdoorSpace} onChange={e=>setCompForm(s=>({...s,outdoorSpace:e.target.value}))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:compForm.outdoorSpace?'var(--ink)':'var(--ink3)'}}>
-                <option value="">Select...</option>
-                <option value="none">None</option>
-                <option value="shared-garden">Shared garden</option>
-                <option value="garden">Garden</option>
-                <option value="balcony">Balcony</option>
-                <option value="terrace">Terrace</option>
-                <option value="roof-terrace">Roof terrace</option>
-              </select>
-            </FormRow>
-          </div>
-        </>)}
+        <FormRow label="Outdoor space">
+          <select value={compForm.outdoorSpace} onChange={e=>setCompForm(s=>({...s,outdoorSpace:e.target.value}))} style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none',color:compForm.outdoorSpace?'var(--ink)':'var(--ink3)'}}>
+            <option value="">Select...</option>
+            <option value="none">None</option>
+            <option value="shared-garden">Shared garden</option>
+            <option value="garden">Garden</option>
+            <option value="balcony">Balcony</option>
+            <option value="terrace">Terrace</option>
+            <option value="roof-terrace">Roof terrace</option>
+          </select>
+        </FormRow>
+        <FormRow label="Notes"><Textarea value={compForm.notes} onChange={e=>setCompForm(s=>({...s,notes:e.target.value}))} style={{minHeight:60}} /></FormRow>
       </Sheet>
 
-      {/* Import from past sales sheet */}
+            {/* Import from past sales sheet */}
       <Sheet open={importPSOpen} onClose={()=>{setImportPSOpen(false);setImportPSSearch('')}} title={`Import ${importPSType === 'forsale' ? 'for-sale' : importPSType === 'auction' ? 'auction' : 'sold'} comparable`}
         footer={<Btn full onClick={()=>{setImportPSOpen(false);setImportPSSearch('')}}>Close</Btn>}>
         <div style={{display:'flex',alignItems:'center',gap:8,background:'var(--cream)',border:'1px solid var(--border)',borderRadius:6,padding:'7px 10px',marginBottom:12}}>
