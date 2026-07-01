@@ -200,10 +200,10 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
     setCompForm({ address: '', postcode: '', price: '', date: '', dateListed: '', sqft: '', sqm: '', beds: '', baths: '', tenure: '', outdoorSpace: '', guidePrice: '', notes: '' })
   }
 
-  function tickComp(type: 'forsale'|'sold'|'auction', idx: number) {
-    const all = prop.comparables?.[type] || []
-    const filtered = fByDate(all)
-    filtered[idx].ticked = !filtered[idx].ticked
+  function tickComp(type: 'forsale'|'sold'|'auction', id: string) {
+    const all = (prop.comparables?.[type] || []).map((c: any) =>
+      c.id === id ? { ...c, ticked: !c.ticked } : c
+    )
     up({ comparables: { ...prop.comparables, [type]: all } })
   }
 
@@ -254,7 +254,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
               <Fragment key={c.id}>
                 <tr style={{borderBottom: showExtra ? 'none' : '1px solid var(--border)'}}>
                   <td style={td}>
-                    <div onClick={() => tickComp(type, i)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div>
+                    <div onClick={() => tickComp(type, c.id)} style={{ width:16,height:16,border:`1.5px solid ${c.ticked?'var(--accent)':'var(--border)'}`,borderRadius:4,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:10,background:c.ticked?'var(--accent)':'#fff',color:'#fff' }}>{c.ticked?'✓':''}</div>
                   </td>
                   <td style={td}>
                     <div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.address}</div>
