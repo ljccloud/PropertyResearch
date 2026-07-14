@@ -73,6 +73,86 @@ export function CompareScreen() {
   const lw = 140
   const cw = 160
 
+  const compTypes: { type: 'forsale'|'sold'|'auction'; label: string; dateLabel: string }[] = [
+    { type: 'forsale', label: 'For sale comparables', dateLabel: 'Listed' },
+    { type: 'sold',    label: 'Sold comparables',     dateLabel: 'Sold'   },
+    { type: 'auction', label: 'Auction comparables',  dateLabel: 'Sold'   },
+  ]
+
+  // Gather all ticked comparables of a given type across all compared properties
+  function tickedComps(type: 'forsale'|'sold'|'auction') {
+    const seen = new Set<string>()
+    const out: { prop: Property; comp: any }[] = []
+    for (const p of props) {
+      for (const c of (p.comparables?.[type] || []) as any[]) {
+        if (c.ticked && !seen.has(c.id)) {
+          seen.add(c.id)
+          out.push({ prop: p, comp: c })
+        }
+      }
+    }
+    return out
+  }
+
+  const compLabelW = 140
+  const compColW = 200
+
+  function CompsTable({ type, label, dateLabel }: { type: 'forsale'|'sold'|'auction'; label: string; dateLabel: string }) {
+    const entries = tickedComps(type)
+    if (!entries.length) return null
+
+    const compRows: { label: string; fn: (c: any) => string }[] = [
+      { label: 'Address',       fn: c => c.address || '—' },
+      { label: 'Postcode',      fn: c => c.postcode || '—' },
+      { label: dateLabel + ' price', fn: c => c.price ? gbp(c.price) : '—' },
+      { label: 'Guide price',   fn: c => c.guidePrice ? gbp(c.guidePrice) : '—' },
+      { label: dateLabel + ' date',  fn: c => fmtDate(c.date) },
+      { label: 'Sq ft',        fn: c => c.sqft ? c.sqft.toLocaleString('en-GB') : '—' },
+      { label: '£/sqft',       fn: c => c.psf ? '£' + c.psf.toLocaleString('en-GB') + '/ft' : (c.sqft && c.price ? '£' + Math.round(c.price / c.sqft).toLocaleString('en-GB') + '/ft' : '—') },
+      { label: 'Beds',         fn: c => c.beds ? String(c.beds) : '—' },
+      { label: 'Outdoor',      fn: c => OUTDOOR_LABELS[c.outdoorSpace || ''] || '—' },
+      { label: 'Notes',        fn: c => c.notes || '—' },
+    ]
+
+    // For for-sale, hide guide price
+    const filteredRows = type === 'forsale'
+      ? compRows.filter(r => r.label !== 'Guide price')
+      : compRows
+
+    return (
+      <div style={{ marginTop: 24 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, paddingLeft: compLabelW }}>{label}</div>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'flex', minWidth: compLabelW + compColW * entries.length }}>
+            {/* Label column */}
+            <div style={{ width: compLabelW, flexShrink: 0 }}>
+              <div style={{ height: 54, marginBottom: 8 }} />
+              {filteredRows.map(r => (
+                <div key={r.label} style={{ height: 36, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--ink2)', borderBottom: '1px solid var(--cream2)', paddingRight: 8 }}>
+                  {r.label}
+                </div>
+              ))}
+            </div>
+            {/* Comparable columns */}
+            {entries.map(({ prop: p, comp: c }, i) => (
+              <div key={c.id} style={{ width: compColW, flexShrink: 0, padding: '0 4px' }}>
+                <div style={{ background: 'var(--cream2)', borderRadius: 10, padding: '8px 10px', marginBottom: 8, height: 54, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.address}</div>
+                  <div style={{ fontSize: 9, color: 'var(--ink3)' }}>via {p.address}</div>
+                </div>
+                {filteredRows.map(r => (
+                  <div key={r.label} style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontSize: 12, fontWeight: 500, borderBottom: '1px solid var(--cream2)', textAlign: 'right' }}>
+                    {r.fn(c)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
       <div style={{ display: 'flex', minWidth: lw + cw * props.length }}>
@@ -125,6 +205,10 @@ export function CompareScreen() {
           </div>
         ))}
       </div>
+
+      {compTypes.map(({ type, label, dateLabel }) => (
+        <CompsTable key={type} type={type} label={label} dateLabel={dateLabel} />
+      ))}
     </div>
   )
 }
