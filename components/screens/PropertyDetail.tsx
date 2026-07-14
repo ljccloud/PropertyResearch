@@ -273,9 +273,11 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                     <td></td>
                     <td colSpan={type==='auction'?4:3} style={{...td,paddingTop:2,paddingBottom:6}}>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {(c.beds||c.baths) && <span style={{fontSize:10,color:'var(--ink3)'}}>{c.beds||'—'}/{c.baths||'—'} bed/bath</span>}
-                        {c.tenure && <span style={{fontSize:10,color:'var(--ink3)'}}>{TENURE[c.tenure]||c.tenure}</span>}
-                        {c.outdoorSpace && <span style={{fontSize:10,color:'var(--ink3)'}}>{OUTDOOR[c.outdoorSpace]||c.outdoorSpace}</span>}
+                        {c.beds && c.beds > 0 ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.beds} bed</span> : null}
+                        {c.baths && c.baths > 0 ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.baths} bath</span> : null}
+                        {c.sqft && c.sqft > 0 ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.sqft.toLocaleString('en-GB')} sqft</span> : null}
+                        {c.tenure ? <span style={{fontSize:10,color:'var(--ink3)'}}>{TENURE[c.tenure]||c.tenure}</span> : null}
+                        {c.outdoorSpace ? <span style={{fontSize:10,color:'var(--ink3)'}}>{OUTDOOR[c.outdoorSpace]||c.outdoorSpace}</span> : null}
                       </div>
                     </td>
                   </tr>
