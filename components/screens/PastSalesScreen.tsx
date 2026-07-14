@@ -117,7 +117,7 @@ export function PastSalesScreen() {
       <>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '.07em', textTransform: 'uppercase', margin: '14px 0 7px', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>{title}</div>
         <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '0 12px', marginBottom: 10 }}>
-          {items.map(s => <SaleRow key={s.id} s={s} />)}
+          {items.map(s => <div key={s.id}>{SaleRow({ s })}</div>)}
         </div>
       </>
     )
@@ -149,8 +149,8 @@ export function PastSalesScreen() {
         ))}
       </div>
 
-      {filter !== 'auction' && <Section title="Sold" items={sold} />}
-      {filter !== 'sold' && <Section title="Sold at auction" items={auction} />}
+      {filter !== 'auction' && <div>{Section({ title: 'Sold', items: sold })}</div>}
+      {filter !== 'sold' && <div>{Section({ title: 'Sold at auction', items: auction })}</div>}
       {!filtered.length && <p style={{ textAlign: 'center', color: 'var(--ink3)', padding: 28, fontSize: 13 }}>No entries yet. Tap + to add.</p>}
 
 
