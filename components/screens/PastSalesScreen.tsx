@@ -92,8 +92,6 @@ export function PastSalesScreen() {
           <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
             <span>{s.postcode}</span>
             {s.dateSold && <span>{fmtDate(s.dateSold)}</span>}
-            {s.beds && s.beds > 0 ? <span>{s.beds} bed</span> : null}
-            {s.sqft && s.sqft > 0 ? <span>{s.sqft.toLocaleString('en-GB')} sqft</span> : null}
             {s.auction && <span style={{ color: 'var(--amber)', fontWeight: 500 }}>Auction</span>}
             {above && <span style={{ color: s.soldPrice > s.guide ? 'var(--red)' : 'var(--green)', fontWeight: 500 }}>{above}</span>}
           </div>
@@ -101,7 +99,11 @@ export function PastSalesScreen() {
         <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{gbp(s.soldPrice)}</div>
-            <div style={{ fontSize: 11, color: 'var(--ink3)' }}>{psfVal ? '£' + psfVal.toLocaleString('en-GB') + '/sqft' : ''}</div>
+            <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1 }}>
+              {psfVal ? <span>£{psfVal.toLocaleString('en-GB')}/sqft</span> : null}
+              {s.beds && s.beds > 0 ? <span style={{ marginLeft: psfVal ? 6 : 0 }}>{s.beds} bed</span> : null}
+              {s.sqft && s.sqft > 0 ? <span style={{ marginLeft: (psfVal || (s.beds && s.beds > 0)) ? 6 : 0 }}>{s.sqft.toLocaleString('en-GB')} sqft</span> : null}
+            </div>
           </div>
           <button onClick={() => setConfirmDeleteId(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: 16, padding: '2px 4px', lineHeight: 1 }} title="Delete">
             <i className="ti ti-trash" style={{ fontSize: 14 }} />
