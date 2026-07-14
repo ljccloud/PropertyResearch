@@ -58,8 +58,8 @@ export function PastSalesScreen() {
       dateListed: form.dateListed ? form.dateListed + '-01' : '',
       dateSold: form.dateSold ? form.dateSold + '-01' : '',
       soldPrice: parseFloat(form.soldPrice) || 0,
-      sqft: parseFloat(form.sqft) || 0, sqm: parseFloat(form.sqm) || 0,
-      beds: parseFloat(form.beds) || 0, outdoor: form.outdoor,
+      sqft: parseFloat(form.sqft) || undefined, sqm: parseFloat(form.sqm) || undefined,
+      beds: parseFloat(form.beds) || undefined, outdoor: form.outdoor,
       notes: form.notes, auction: form.auction,
     }
     addPastSale(s)
@@ -92,8 +92,8 @@ export function PastSalesScreen() {
           <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
             <span>{s.postcode}</span>
             {s.dateSold && <span>{fmtDate(s.dateSold)}</span>}
-            {s.beds ? <span>{s.beds} bed</span> : null}
-            {s.sqft ? <span>{s.sqft.toLocaleString('en-GB')} sqft</span> : null}
+            {s.beds && s.beds > 0 ? <span>{s.beds} bed</span> : null}
+            {s.sqft && s.sqft > 0 ? <span>{s.sqft.toLocaleString('en-GB')} sqft</span> : null}
             {s.auction && <span style={{ color: 'var(--amber)', fontWeight: 500 }}>Auction</span>}
             {above && <span style={{ color: s.soldPrice > s.guide ? 'var(--red)' : 'var(--green)', fontWeight: 500 }}>{above}</span>}
           </div>
@@ -169,10 +169,10 @@ export function PastSalesScreen() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
           <FormRow label="Sold price"><Input type="number" value={form.soldPrice} onChange={e => setForm(s => ({ ...s, soldPrice: e.target.value }))} /></FormRow>
-          <FormRow label="Sq ft"><Input type="number" value={form.sqft} onChange={e => setForm(s => ({ ...s, sqft: e.target.value }))} /></FormRow>
+          <FormRow label="Sq ft"><Input type="number" value={form.sqft} onChange={e => { const v = e.target.value; const sqm = v ? String(Math.round(parseFloat(v) * 0.092903 * 100) / 100) : ''; setForm(s => ({ ...s, sqft: v, sqm })) }} /></FormRow>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
-          <FormRow label="Sq m"><Input type="number" value={form.sqm} onChange={e => setForm(s => ({ ...s, sqm: e.target.value }))} /></FormRow>
+          <FormRow label="Sq m"><Input type="number" value={form.sqm} onChange={e => { const v = e.target.value; const sqft = v ? String(Math.round(parseFloat(v) / 0.092903)) : ''; setForm(s => ({ ...s, sqm: v, sqft })) }} /></FormRow>
           <FormRow label="Bedrooms"><Input type="number" value={form.beds} onChange={e => setForm(s => ({ ...s, beds: e.target.value }))} /></FormRow>
         </div>
         <FormRow label="Outdoor space">
@@ -285,10 +285,10 @@ export function PastSalesScreen() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
               <FormRow label="Sold price"><Input type="number" value={editForm.soldPrice ?? ''} onChange={e => setEditForm(s => ({ ...s, soldPrice: parseFloat(e.target.value) || 0 }))} /></FormRow>
-              <FormRow label="Sq ft"><Input type="number" value={editForm.sqft ?? ''} onChange={e => setEditForm(s => ({ ...s, sqft: parseFloat(e.target.value) || 0 }))} /></FormRow>
+              <FormRow label="Sq ft"><Input type="number" value={editForm.sqft ?? ''} onChange={e => { const v = parseFloat(e.target.value); const sqm = v ? Math.round(v * 0.092903 * 100) / 100 : 0; setEditForm(s => ({ ...s, sqft: v || 0, sqm })) }} /></FormRow>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 11 }}>
-              <FormRow label="Sq m"><Input type="number" value={editForm.sqm ?? ''} onChange={e => setEditForm(s => ({ ...s, sqm: parseFloat(e.target.value) || 0 }))} /></FormRow>
+              <FormRow label="Sq m"><Input type="number" value={editForm.sqm ?? ''} onChange={e => { const v = parseFloat(e.target.value); const sqft = v ? Math.round(v / 0.092903) : 0; setEditForm(s => ({ ...s, sqm: v || 0, sqft })) }} /></FormRow>
               <FormRow label="Bedrooms"><Input type="number" value={editForm.beds ?? ''} onChange={e => setEditForm(s => ({ ...s, beds: parseFloat(e.target.value) || 0 }))} /></FormRow>
             </div>
             <FormRow label="Outdoor space">

@@ -163,7 +163,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
       price: parseFloat(compForm.price)||0,
       date: compForm.date ? compForm.date + '-01' : '',
       dateListed: compForm.dateListed ? compForm.dateListed + '-01' : '',
-      sqft: parseFloat(compForm.sqft)||0,
+      sqft: parseFloat(compForm.sqft)||undefined,
       sqm: parseFloat(compForm.sqm)||undefined,
       ticked: false,
       beds: parseFloat(compForm.beds)||undefined,
@@ -941,13 +941,13 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                 style={{width:'100%',background:'#fff',border:'1px solid var(--border)',borderRadius:6,padding:'8px 10px',fontFamily:"'DM Sans',sans-serif",fontSize:13,outline:'none',WebkitAppearance:'none',appearance:'none'}} />
             </FormRow>
           ) : (
-            <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
+            <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>{const v=e.target.value;const sqm=v?String(Math.round(parseFloat(v)*0.092903*100)/100):'';setCompForm(s=>({...s,sqft:v,sqm}))}} /></FormRow>
           )}
         </div>
         {(compType==='sold'||compType==='auction') && (
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>
-            <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>setCompForm(s=>({...s,sqft:e.target.value}))} /></FormRow>
-            <FormRow label="Sq m"><Input type="number" value={compForm.sqm} onChange={e=>setCompForm(s=>({...s,sqm:e.target.value}))} /></FormRow>
+            <FormRow label="Sq ft"><Input type="number" value={compForm.sqft} onChange={e=>{const v=e.target.value;const sqm=v?String(Math.round(parseFloat(v)*0.092903*100)/100):'';setCompForm(s=>({...s,sqft:v,sqm}))}} /></FormRow>
+            <FormRow label="Sq m"><Input type="number" value={compForm.sqm} onChange={e=>{const v=e.target.value;const sqft=v?String(Math.round(parseFloat(v)/0.092903)):'';setCompForm(s=>({...s,sqm:v,sqft}))}} /></FormRow>
           </div>
         )}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:11}}>

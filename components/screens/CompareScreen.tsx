@@ -107,9 +107,9 @@ export function CompareScreen() {
       { label: dateLabel + ' price', fn: c => c.price ? gbp(c.price) : '—' },
       { label: 'Guide price',   fn: c => c.guidePrice ? gbp(c.guidePrice) : '—' },
       { label: dateLabel + ' date',  fn: c => fmtDate(c.date) },
-      { label: 'Sq ft',        fn: c => c.sqft ? c.sqft.toLocaleString('en-GB') : '—' },
+      { label: 'Sq ft',        fn: c => c.sqft && c.sqft > 0 ? c.sqft.toLocaleString('en-GB') : '—' },
       { label: '£/sqft',       fn: c => c.psf ? '£' + c.psf.toLocaleString('en-GB') + '/ft' : (c.sqft && c.price ? '£' + Math.round(c.price / c.sqft).toLocaleString('en-GB') + '/ft' : '—') },
-      { label: 'Beds',         fn: c => c.beds ? String(c.beds) : '—' },
+      { label: 'Beds',         fn: c => c.beds && c.beds > 0 ? String(c.beds) : '—' },
       { label: 'Outdoor',      fn: c => OUTDOOR_LABELS[c.outdoorSpace || ''] || '—' },
       { label: 'Notes',        fn: c => c.notes || '—' },
     ]
