@@ -1006,7 +1006,7 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                 {alreadyAdded
                   ? <span style={{fontSize:11,color:'var(--green)',flexShrink:0}}>Added ✓</span>
                   : <button onClick={()=>{
-                      const c = { id: s.id, address: s.address, postcode: s.postcode, price: s.soldPrice, date: s.dateSold, sqft: s.sqft, psf: psf||undefined, ticked: false }
+                      const c = { id: s.id, address: s.address, postcode: s.postcode, price: s.soldPrice, date: s.dateSold, dateListed: s.dateListed, sqft: s.sqft, sqm: s.sqm, psf: psf||undefined, beds: s.beds, outdoorSpace: s.outdoor, guidePrice: s.guide, notes: s.notes, ticked: false }
                       const comps = { ...prop.comparables, [importPSType]: [...(prop.comparables?.[importPSType]||[]), c] }
                       up({ comparables: comps })
                     }} style={{fontSize:12,padding:'5px 10px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>

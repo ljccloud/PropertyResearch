@@ -92,6 +92,8 @@ export function PastSalesScreen() {
           <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 1, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
             <span>{s.postcode}</span>
             {s.dateSold && <span>{fmtDate(s.dateSold)}</span>}
+            {s.beds ? <span>{s.beds} bed</span> : null}
+            {s.sqft ? <span>{s.sqft.toLocaleString('en-GB')} sqft</span> : null}
             {s.auction && <span style={{ color: 'var(--amber)', fontWeight: 500 }}>Auction</span>}
             {above && <span style={{ color: s.soldPrice > s.guide ? 'var(--red)' : 'var(--green)', fontWeight: 500 }}>{above}</span>}
           </div>

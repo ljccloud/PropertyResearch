@@ -207,7 +207,7 @@ export function CompareScreen() {
       </div>
 
       {compTypes.map(({ type, label, dateLabel }) => (
-        <CompsTable key={type} type={type} label={label} dateLabel={dateLabel} />
+        <div key={type}>{CompsTable({ type, label, dateLabel })}</div>
       ))}
     </div>
   )
