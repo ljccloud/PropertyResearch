@@ -111,9 +111,9 @@ export interface PastSale {
   dateListed: string
   dateSold: string
   soldPrice: number
-  sqft: number
-  sqm: number
-  beds: number
+  sqft?: number
+  sqm?: number
+  beds?: number
   outdoor: string
   notes: string
   auction: boolean
