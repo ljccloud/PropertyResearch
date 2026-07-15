@@ -242,12 +242,12 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
             <tr>
               <th style={{...th,width:20}}></th>
               <th style={th}>Address</th>
+              <th style={{...th,width:44}}>Sqft</th>
+              <th style={{...th,width:36}}>Beds</th>
               {type==='auction' && <th style={{...th,width:60}}>Guide</th>}
               <th style={{...th,width:60}}>{dateLabel}</th>
               <th style={{...th,width:68}}>Price</th>
               <th style={{...th,width:56}}>£/sqft</th>
-              <th style={{...th,width:44}}>Sqft</th>
-              <th style={{...th,width:36}}>Beds</th>
               <th style={{...th,width:24}}></th>
             </tr>
           </thead>
@@ -262,12 +262,12 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                     <div style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.address}</div>
                     <div style={{fontSize:10,color:'var(--ink3)'}}>{c.postcode}</div>
                   </td>
+                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.sqft && c.sqft > 0 ? c.sqft.toLocaleString('en-GB') : '—'}</td>
+                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.beds && c.beds > 0 ? c.beds : '—'}</td>
                   {type==='auction' && <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.guidePrice ? gbp(c.guidePrice) : '—'}</td>}
                   <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date ? fmtDate(c.date) : '—'}</td>
                   <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
                   <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf.toLocaleString('en-GB') : '—'}</td>
-                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.sqft && c.sqft > 0 ? c.sqft.toLocaleString('en-GB') : '—'}</td>
-                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.beds && c.beds > 0 ? c.beds : '—'}</td>
                   <td style={{...td,width:24}}>
                     <div onClick={() => removeComp(type, c.id)} title="Remove from comparables" style={{width:18,height:18,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink3)',fontSize:13,borderRadius:4,lineHeight:1}}>×</div>
                   </td>
