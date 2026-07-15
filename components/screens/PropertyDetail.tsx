@@ -246,7 +246,9 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
               <th style={{...th,width:60}}>{dateLabel}</th>
               <th style={{...th,width:68}}>Price</th>
               <th style={{...th,width:56}}>£/sqft</th>
-            <th style={{...th,width:24}}></th>
+              <th style={{...th,width:44}}>Sqft</th>
+              <th style={{...th,width:36}}>Beds</th>
+              <th style={{...th,width:24}}></th>
             </tr>
           </thead>
           <tbody>
@@ -264,6 +266,8 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                   <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.date ? fmtDate(c.date) : '—'}</td>
                   <td style={{...td,fontSize:11}}>{gbp(c.price)}</td>
                   <td style={{...td,fontSize:11}}>{c.psf ? '£'+c.psf.toLocaleString('en-GB') : '—'}</td>
+                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.sqft && c.sqft > 0 ? c.sqft.toLocaleString('en-GB') : '—'}</td>
+                  <td style={{...td,fontSize:11,color:'var(--ink3)'}}>{c.beds && c.beds > 0 ? c.beds : '—'}</td>
                   <td style={{...td,width:24}}>
                     <div onClick={() => removeComp(type, c.id)} title="Remove from comparables" style={{width:18,height:18,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--ink3)',fontSize:13,borderRadius:4,lineHeight:1}}>×</div>
                   </td>
@@ -271,13 +275,12 @@ export function PropertyDetail({ propertyId, onClose, searchBtn }: Props) {
                 {showExtra && (
                   <tr style={{borderBottom:'1px solid var(--border)'}}>
                     <td></td>
-                    <td colSpan={type==='auction'?4:3} style={{...td,paddingTop:2,paddingBottom:6}}>
+                    <td colSpan={type==='auction'?6:5} style={{...td,paddingTop:2,paddingBottom:6}}>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {c.beds && c.beds > 0 ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.beds} bed</span> : null}
                         {c.baths && c.baths > 0 ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.baths} bath</span> : null}
-                        {c.sqft && c.sqft > 0 ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.sqft.toLocaleString('en-GB')} sqft</span> : null}
                         {c.tenure ? <span style={{fontSize:10,color:'var(--ink3)'}}>{TENURE[c.tenure]||c.tenure}</span> : null}
                         {c.outdoorSpace ? <span style={{fontSize:10,color:'var(--ink3)'}}>{OUTDOOR[c.outdoorSpace]||c.outdoorSpace}</span> : null}
+                        {c.notes ? <span style={{fontSize:10,color:'var(--ink3)'}}>{c.notes}</span> : null}
                       </div>
                     </td>
                   </tr>
